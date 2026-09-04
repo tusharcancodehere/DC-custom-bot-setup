@@ -1,0 +1,19 @@
+{
+  "embeds": [
+    {
+      "title": "Welcome to the Server",
+      "description": "Quick start guide:\n📖 {rules} — Keep it clean, respectful, and chill.\n🎭 {roles} — Grab your roles to unlock channels and ping preferences.\n📢 {announcements} — Stay updated on news, events, and changes.\n💬 {general} — Jump in and introduce yourself!\n\nNeed help? Ping @Moderator or open a ticket in {support}. Make yourself at home!",
+      "color": 7829115,
+      "author": {
+        "name": "Developed by Tushar",
+        "url": "https://github.com/tusharcancodehere",
+        "icon_url": "https://i.pinimg.com/736x/51/b6/b4/51b6b404e5a029c5e97087340be4eb90.jpg"
+      },
+      "footer": {
+        "text": "Github",
+        "icon_url": "https://img.icons8.com/?size=100&id=12599&format=png&color=000000"
+      },
+      "timestamp": "2026-09-04T15:39:48.093Z"
+    }
+  ]
+}
