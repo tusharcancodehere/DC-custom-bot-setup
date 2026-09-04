@@ -6,22 +6,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(
-    filename="logs/bot.log",
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-)
+logging.basicConfig(filename="logs/bot.log", level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
 class CustomBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
-        super().__init__(
-            command_prefix="!",
-            intents=intents,
-            application_id=int(os.getenv("APPLICATION_ID"))
-        )
+        super().__init__(command_prefix="!", intents=intents, application_id=int(os.getenv("APPLICATION_ID")))
         self.token = os.getenv("DISCORD_TOKEN")
         self.server_id = int(os.getenv("SERVER_ID"))
 
@@ -37,13 +29,13 @@ class CustomBot(commands.Bot):
         await self.load_extension("features.welcome.commands")
         await self.load_extension("features.levels.commands")
         await self.load_extension("features.general.commands")
+        await self.load_extension("features.ai.commands")
         logging.info("Features loaded")
 
     async def on_ready(self):
         guild = discord.Object(id=self.server_id)
         self.tree.copy_global_to(guild=guild)
         synced = await self.tree.sync(guild=guild)
-
         logging.info(f"Logged in as {self.user}")
         logging.info(f"Synced {len(synced)} commands")
         print(f"Logged in as {self.user}")
