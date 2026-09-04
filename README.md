@@ -1,320 +1,195 @@
 # DC Custom Bot
 
-A modular, open-source Discord bot built with Python.
+A modular, open-source Discord bot built with Python 3.13 and [`discord.py`](https://github.com/Rapptz/discord.py).
 
-DC Custom Bot provides server management, moderation, community, entertainment, and AI features in one configurable bot while keeping the codebase simple enough for contributors to understand and extend.
+DC Custom Bot provides server moderation, community engagement, leveling, general utilities, and dual-provider AI assistance in a single configurable bot. The project is designed with a lightweight, modular architecture so developers can easily understand the codebase, add new features, and contribute.
 
-> **Status:** Early development
+---
+
+## Current Status
+
+> **Status:** Active Early Development
+
+Core bot infrastructure, moderation tools, welcome embeds, level displays, and AI conversation commands are functional. Additional systems—including support tickets, entertainment mini-games, voice/music playback, and PostgreSQL database models—are currently under development. Track ongoing progress and upcoming milestones in [`TODO.md`](TODO.md).
 
 ---
 
 ## Features
 
-### 🛠️ Administration
-
-Tools for managing and configuring your Discord server.
-
-* Server management
-* Channel management
-* Role management
-* Server configuration
-* Announcements
-* Feature configuration
-
 ### 🛡️ Moderation
+Essential moderation commands with server-side permission checks and role hierarchy protection:
+* `/kick` — Kick a member from the server with an optional reason.
+* `/ban` — Ban a member from the server with an optional reason.
+* `/unban` — Unban a user by their Discord user ID.
+* `/timeout` — Temporarily timeout/mute a member for a specified duration in minutes.
+* `/purge` — Bulk delete recent channel messages (1–100 messages).
+* `/warn` — Send a formal direct message warning to a member.
 
-Essential moderation tools for keeping servers safe and manageable.
+### 🤖 AI Assistant
+Integrated conversational AI powered by dual providers with automated fallback:
+* `/ask` — Send prompts to the AI assistant. Queries OpenAI (`gpt-5-mini`) first, automatically falling back to Google Gemini (`gemini-2.5-flash`) if unavailable.
+* `/clear` — Reset your personal conversation history with the bot.
 
-* Ban
-* Unban
-* Kick
-* Timeout
-* Warnings
-* Message purge
-* Channel locking
-* Slowmode
-* Moderation logging
-* Auto moderation
-* Spam protection
-* Invite and link filtering
-
-### 🎫 Tickets
-
-A configurable support ticket system.
-
-* Ticket panels
-* Ticket creation
-* Ticket categories
-* Claiming tickets
-* Adding and removing users
-* Closing tickets
-* Staff permissions
-* Ticket logging
-* Ticket transcripts
-
-### 👋 Welcome
-
-Customizable member join and leave functionality.
-
-* Welcome messages
-* Leave messages
-* Custom channels
-* Auto roles
-* Welcome images
-* Test messages
-* Configurable templates
+### 👋 Welcome System
+Customizable member greeting functionality:
+* `/welcome` — Displays a formatted welcome embed loaded from a configurable JSON template (`embed.json`) with dynamic channel mention formatting.
 
 ### 🆙 Level System
+Activity and rank tracking components:
+* `/level` — Display an interactive rank and level card with visual progress indicators.
+* `/show_xp` — View the total XP of a specified member.
+* `/leaderboard` & `/rank` — Placeholders for upcoming server-wide ranking tables.
 
-Reward server activity with an XP and leveling system.
+### ⚙️ General & Utility
+* `/ping` — Check bot connectivity and response status.
+* `!shutdown` — Gracefully shut down the bot (restricted to the bot application owner).
+* **Guild Command Syncing** — Automatically copies and synchronizes slash commands to your target guild upon startup for instantaneous testing.
 
-* XP tracking
-* Levels
-* Rank cards
-* Leaderboards
-* Level-up announcements
-* Level rewards
-* Role rewards
-* Server-specific configuration
-
-### 🎮 Games
-
-Interactive games and entertainment.
-
-* Coin flip
-* Dice
-* Rock Paper Scissors
-* 8 Ball
-* Trivia
-* Tic Tac Toe
-* Connect Four
-* Blackjack
-* Game statistics
-
-### 🎵 Music
-
-Voice and audio functionality.
-
-* Music playback
-* Queue
-* Pause and resume
-* Skip
-* Stop
-* Loop
-* Volume
-* Now playing
-
-### 🤖 AI
-
-AI-powered functionality integrated into Discord.
-
-* AI commands
-* Conversations
-* Context-aware responses
-* AI assistance
-* Future AI-powered server tools
-
----
-
-## Planned Features
-
-The bot is designed to grow beyond its initial feature set.
-
-Planned and possible future features include:
-
-* Economy
-* Giveaways
-* Polls
-* Reminders
-* Reaction roles
-* Suggestions
-* Starboard
-* Verification
-* Custom commands
-* Temporary voice channels
-* Server statistics
-* Advanced AutoMod
-* AI moderation
-* Web dashboard
-* Public API
-
-See [`TODO.md`](TODO.md) for the current development roadmap.
+### 🗺️ Planned Features
+Features currently on the roadmap include:
+* Support ticket panels, claiming, and transcript generation.
+* Interactive games (Coinflip, Dice, RPS, 8Ball, Trivia, Tic-Tac-Toe, Connect Four, Blackjack).
+* Voice channel audio and music streaming.
+* Persistent database models and migrations with PostgreSQL, SQLAlchemy, and Alembic.
 
 ---
 
 ## Technology Stack
 
-| Technology  | Purpose                             |
-| ----------- | ----------------------------------- |
-| Python 3.13 | Main programming language           |
-| discord.py  | Discord API and bot framework       |
-| PostgreSQL  | Persistent database                 |
-| SQLAlchemy  | Database toolkit and ORM            |
-| asyncpg     | PostgreSQL driver                   |
-| Alembic     | Database migrations                 |
-| aiohttp     | Asynchronous HTTP requests          |
-| OpenAI SDK  | AI functionality                    |
-| Pillow      | Image processing                    |
-| Jinja2      | HTML templates and transcripts      |
-| PyNaCl      | Discord voice support               |
-| FFmpeg      | Audio processing                    |
-| uv          | Python dependency management        |
-| mise        | Development tool/version management |
+| Technology | Version | Purpose |
+| :--- | :--- | :--- |
+| **Python** | `>= 3.13` | Core programming language |
+| **discord.py** | `>= 2.7.1` | Discord API wrapper and bot framework |
+| **uv** | Latest | Fast Python package and dependency manager |
+| **mise** | Latest | Tool and runtime version management |
+| **PostgreSQL** | `>= 15` | Relational database for persistent storage |
+| **SQLAlchemy** | `>= 2.0.52` | Asynchronous ORM and SQL toolkit |
+| **asyncpg** | `>= 0.31.0` | High-performance PostgreSQL asynchronous driver |
+| **Alembic** | `>= 1.19.1` | Database schema migrations |
+| **OpenAI SDK** | `>= 3.8.0` | OpenAI API client for AI features |
+| **Google GenAI** | `>= 2.22.0` | Google Gemini API client for fallback AI features |
+| **Pillow** | `>= 12.3.0` | Image processing (rank cards and welcome graphics) |
+| **Jinja2** | `>= 3.1.6` | Template rendering (transcripts and HTML exports) |
+| **PyNaCl** | `>= 1.6.2` | Voice support encryption library |
+| **Ruff** | Latest | Code formatting and linting |
+| **pytest** | Latest | Automated testing framework |
 
 ---
 
-## Architecture
-
-The project intentionally uses a simple modular architecture.
+## Project Structure
 
 ```text
-src/
-├── main.py
-│
-├── core/
-│   ├── bot.py
-│   ├── config.py
-│   ├── loader.py
-│   ├── errors.py
-│   ├── logging.py
-│   └── permissions.py
-│
-├── features/
-│   ├── admin/
-│   ├── moderation/
-│   ├── tickets/
-│   ├── welcome/
-│   ├── levels/
-│   ├── games/
-│   ├── music/
-│   └── ai/
-│
-├── views/
-│   └── common.py
-│
-└── database/
-    └── database.py
+DC-custom-bot-setup/
+├── src/
+│   ├── main.py              # Application entrypoint
+│   ├── core/                # Bot initialization and shared subsystems
+│   │   ├── bot.py           # CustomBot class, setup_hook, on_ready sync
+│   │   ├── config.py        # Configuration loading
+│   │   ├── errors.py        # Global exception handling
+│   │   ├── loader.py        # Cog discovery and loading
+│   │   ├── logging.py       # Central application logging
+│   │   └── permissions.py   # Permission checks and decorators
+│   ├── features/            # Independent, modular bot features
+│   │   ├── admin/           # Server administration commands
+│   │   ├── ai/              # AI commands (/ask, /clear)
+│   │   ├── games/           # Mini-games and entertainment
+│   │   ├── general/         # General utility commands (/ping)
+│   │   ├── levels/          # XP tracking and rank cards (/level, /show_xp)
+│   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, etc.)
+│   │   ├── music/           # Audio playback and queue management
+│   │   ├── tickets/         # Support ticket system
+│   │   └── welcome/         # Welcome messages and templates (/welcome)
+│   ├── views/               # Shared Discord UI components (buttons, modals)
+│   │   └── common.py
+│   └── database/            # Database engine and session management
+│       └── database.py
+├── alembic/                 # Database schema migration scripts
+├── docs/                    # In-depth architectural and developer documentation
+├── scripts/                 # Maintenance and utility scripts
+├── tests/                   # Test suite
+├── .env.example             # Template for required environment variables
+├── pyproject.toml           # Project metadata, dependencies, and script definitions
+├── uv.lock                  # Pinned dependency lockfile
+├── mise.toml                # Runtime tool versions
+├── LICENSE                  # MIT License
+├── CONTRIBUTING.md          # Contribution guidelines
+├── CODE_OF_CONDUCT.md       # Contributor Code of Conduct
+├── SECURITY.md              # Security policy and disclosure process
+└── README.md                # Project documentation overview
 ```
 
-### `core/`
-
-Contains functionality required by the bot itself.
-
-### `features/`
-
-Contains the actual bot features. Each major feature is kept separate so it can be developed and maintained independently.
-
-### `views/`
-
-Contains reusable Discord UI components such as buttons, select menus, and modals.
-
-### `database/`
-
-Contains PostgreSQL database functionality.
-
-The architecture is intentionally not over-engineered. Additional layers or files should be introduced when the project's complexity genuinely requires them.
-
 ---
 
-## Requirements
+## Setup & Installation
 
-You need:
+### Prerequisites
 
-* Python 3.13
-* `mise`
-* `uv`
-* PostgreSQL
-* FFmpeg
-* Git
+* **Python 3.13+**
+* [**uv**](https://docs.astral.sh/uv/)
+* [**mise**](https://mise.jdx.dev/) (optional, recommended for managing Python versions)
+* **Git**
 
----
-
-## Installation
-
-Clone the repository:
+### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/tusharcancodehere/DC-custom-bot-setup.git
 cd DC-custom-bot-setup
 ```
 
-Install the project's configured tools:
+### 2. Install Development Tools
+
+If using `mise`:
 
 ```bash
 mise install
 ```
 
-Install Python dependencies:
+### 3. Install Dependencies
+
+Install all project dependencies into a virtual environment using `uv`:
 
 ```bash
 uv sync
 ```
 
-Create your local environment file:
+### 4. Configure Environment Variables
+
+Create your local `.env` configuration file from the template:
 
 ```bash
 cp .env.example .env
 ```
 
-Configure the required credentials.
+Open `.env` and fill in your values.
 
 ---
 
 ## Environment Variables
 
-The project uses environment variables for secrets and configuration.
+The bot reads configuration settings from environment variables. Define these in your `.env` file:
 
-Example:
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `DISCORD_TOKEN` | Yes | Discord Bot token generated from the Discord Developer Portal. |
+| `APPLICATION_ID` | Yes | Discord Application / Client ID. |
+| `SERVER_ID` | Yes | Discord Guild/Server ID where slash commands will be synced immediately. |
+| `OPENAI_API_KEY` | Optional | API key for OpenAI (`gpt-5-mini`) used by `/ask`. |
+| `GEMINI_API_KEY` | Optional | API key for Google Gemini (`gemini-2.5-flash`) used as a fallback for `/ask`. |
 
-```env
-DISCORD_TOKEN=
-DATABASE_URL=
-OPENAI_API_KEY=
-```
-
-Never commit `.env` or other credentials to Git.
-
----
-
-## Discord Bot Setup
-
-Create a Discord application through the Discord Developer Portal and create a bot user.
-
-Configure the required Gateway Intents for the features you enable.
-
-The exact permissions and intents required may change as features are added.
-
-Never share your Discord bot token.
-
----
-
-## PostgreSQL
-
-DC Custom Bot uses PostgreSQL for persistent data.
-
-The application communicates with PostgreSQL through:
-
-```text
-Python
-   ↓
-SQLAlchemy
-   ↓
-asyncpg
-   ↓
-PostgreSQL
-```
-
-Database schema changes are managed using Alembic migrations.
+> [!WARNING]
+> Never commit your `.env` file or share your bot tokens and API keys publicly.
 
 ---
 
 ## Running the Bot
 
-Run the bot with:
+Run the application using `uv`:
 
 ```bash
 uv run python -m src.main
 ```
+
+Upon startup, the bot loads active features, registers event listeners, and synchronizes slash commands to the designated guild.
 
 ---
 
@@ -326,60 +201,45 @@ Install development dependencies:
 uv sync --dev
 ```
 
-Run tests:
+### Linting and Code Formatting
+
+We use [Ruff](https://docs.astral.sh/ruff/) to maintain code quality:
+
+```bash
+# Check code for linting issues
+uv run ruff check .
+
+# Automatically format code
+uv run ruff format .
+```
+
+### Running Tests
+
+Run the automated test suite using `pytest`:
 
 ```bash
 uv run pytest
-```
-
-Check the code:
-
-```bash
-uv run ruff check .
-```
-
-Format the code:
-
-```bash
-uv run ruff format .
 ```
 
 ---
 
 ## Contributing
 
-Contributions are welcome.
+Contributions from the open-source community are warmly welcomed!
 
-Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
-
-The contribution guide explains:
-
-* Project structure
-* Development setup
-* Adding features
-* Testing
-* Code style
-* Pull requests
-* Commit conventions
-
-Please also read [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+* Please read our [**Contributing Guide**](CONTRIBUTING.md) for full instructions on local setup, code conventions, branch naming, and opening pull requests.
+* All participants must abide by our [**Code of Conduct**](CODE_OF_CONDUCT.md).
 
 ---
 
 ## Security
 
-If you discover a security vulnerability, please follow the instructions in [`SECURITY.md`](SECURITY.md) rather than publicly reporting sensitive details.
+If you discover a security vulnerability, please do **not** report it via public GitHub issues or public chat. Refer to our [**Security Policy**](SECURITY.md) for instructions on confidential reporting.
 
 ---
 
 ## License
 
-This project is licensed under the terms specified in [`LICENSE`](LICENSE).
+This project is licensed under the terms of the [**MIT License**](LICENSE).
 
----
-
-## Project Status
-
-DC Custom Bot is currently under active development.
-
-Features and internal APIs may change as the project evolves toward its first stable release.
+Copyright (c) 2026 Tushar Verma.

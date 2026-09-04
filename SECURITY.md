@@ -1,284 +1,81 @@
 # Security Policy
 
-## Overview
-
-Security is an important part of DC Custom Bot.
-
-Because the project interacts with Discord, external APIs, and a PostgreSQL database, security issues may affect bot accounts, Discord servers, user data, credentials, or project infrastructure.
-
-Please report security vulnerabilities responsibly.
+The security of **DC Custom Bot** and its users is a top priority. Because the bot handles Discord interactions, external API integrations, and database operations, maintaining robust security practices is critical for all contributors and server administrators.
 
 ---
 
 ## Supported Versions
 
-Security fixes are primarily provided for the latest development version and the latest stable release.
+Security updates are actively maintained for the following versions:
 
-| Version               | Supported |
-| --------------------- | --------- |
-| Latest stable         | ✅         |
-| Development branch    | ✅         |
-| Older releases        | ⚠️        |
-| Unmaintained releases | ❌         |
-
-Support status may change as the project develops.
+| Version | Supported |
+| :--- | :--- |
+| `main` (active development) | :white_check_mark: |
+| Latest release | :white_check_mark: |
+| Older releases | :x: |
 
 ---
 
 ## Reporting a Vulnerability
 
-**Do not publicly disclose a security vulnerability through a GitHub issue, pull request, discussion, or public Discord channel.**
+If you discover a security vulnerability in this project, please report it responsibly:
 
-Instead, report the vulnerability privately through the security contact or private reporting mechanism specified by the project maintainers.
+> [!IMPORTANT]
+> **Do NOT disclose vulnerabilities publicly** via GitHub Issues, Discussions, or public Discord servers.
 
-Include as much of the following information as possible:
+### How to Report Privately
 
-* A clear description of the vulnerability.
-* The affected component or feature.
-* Steps required to reproduce the issue.
-* The potential impact.
-* Relevant logs, screenshots, or proof of concept where appropriate.
-* A suggested fix, if you have one.
+1. **GitHub Security Advisories (Preferred)**: Navigate to the repository's **Security** tab, select **Advisories**, and click **Report a vulnerability**.
+2. **Email**: If private vulnerability reporting is unavailable, email the maintainer directly at [thetusharverma2505@gmail.com](mailto:thetusharverma2505@gmail.com) with the subject `[SECURITY] DC Custom Bot Vulnerability Report`.
 
-Please avoid including real credentials, tokens, personal information, or other sensitive data in the report.
+### What to Include in Your Report
 
----
+To help us investigate and resolve the issue quickly, please include:
 
-## What Should Be Reported?
+* A clear description of the vulnerability and its potential security impact.
+* The specific file, feature, or command affected (e.g., `src/features/moderation/commands.py`).
+* Step-by-step reproduction instructions or a minimal proof of concept.
+* Any proposed mitigations or fixes, if available.
 
-Examples of security issues include:
+### What to Avoid
 
-### Discord Permissions
-
-* A user can execute a command without the required permission.
-* A moderation command can be bypassed.
-* A normal member can gain administrative functionality.
-* Bot permission checks can be circumvented.
-
-### Authentication and Credentials
-
-* Discord bot token exposure.
-* Database credential exposure.
-* API key exposure.
-* Credentials accidentally committed to the repository.
-* Authentication bypasses.
-
-### Database Security
-
-* SQL injection.
-* Unauthorized database access.
-* Access to another guild's data.
-* Missing guild/user authorization checks.
-* Unsafe handling of user-controlled database input.
-
-### Data Exposure
-
-* Private ticket contents exposed to unauthorized users.
-* Sensitive moderation information exposed.
-* AI conversation data accessible to unintended users.
-* Server configuration data exposed across guilds.
-
-### Application Security
-
-* Remote code execution.
-* Arbitrary file access.
-* Unsafe command execution.
-* Path traversal.
-* Denial-of-service vulnerabilities.
-* Unsafe handling of external API responses.
-* Vulnerabilities caused by untrusted user input.
+* Do **not** include real credentials, Discord bot tokens, server IDs, or API keys in your report.
+* Please allow maintainers reasonable time to investigate and patch the issue before disclosing it publicly.
 
 ---
 
-## Discord Bot Security
+## Security Best Practices
 
-DC Custom Bot should follow the principle of least privilege.
+### 1. Keeping Secrets Out of Git
 
-The bot should request only the Discord permissions and Gateway Intents required by the enabled functionality.
+* **Never commit secrets to version control.** This includes Discord bot tokens, OpenAI API keys, Google Gemini API keys, database credentials, and webhook URLs.
+* Ensure `.env` is listed in `.gitignore` and never staged for commit.
+* Use `.env.example` as a template containing placeholder values only.
+* If a secret is accidentally committed to Git:
+  1. Revoke and rotate the exposed token or API key immediately.
+  2. Treat any compromised credential as publicly exposed regardless of whether the commit is subsequently removed from Git history.
 
-Do not grant administrator permissions when narrower permissions are sufficient.
+### 2. Environment Variables (`.env` Usage)
 
-Feature implementations should verify permissions on the server side rather than relying only on Discord's command interface.
+* All runtime credentials and configuration must be loaded through environment variables using `dotenv` and `os.getenv`.
+* Never hardcode sensitive values directly into source code, test files, or default parameter values.
+* Ensure loggers do not print environment variables, request headers, or config structures that could contain secrets.
 
----
+### 3. Discord Permissions and Gateway Intents
 
-## Secrets
+* Follow the **principle of least privilege**: request only the Discord permissions and Gateway Intents required for enabled features.
+* Enforce **server-side permission checks** using `@app_commands.checks.has_permissions` and explicit role hierarchy validations. Never rely solely on client-side Discord UI restrictions.
+* Maintain **guild isolation**: ensure all commands and data lookups operate strictly within the context of the calling guild (`interaction.guild`), preventing unauthorized cross-server access.
 
-Never commit secrets to the repository.
+### 4. API Keys and External Providers
 
-This includes:
+* Safeguard all third-party API credentials (such as OpenAI and Google Gemini).
+* Sanitize and validate external API responses before sending them to Discord channels.
+* Avoid forwarding private channel messages, ticket contents, or personal data to external AI models unless explicitly requested by the user.
+* Implement structured error handling to ensure API downtime or provider failures fail gracefully without exposing sensitive error logs or keys in Discord chat.
 
-```text
-Discord bot tokens
-Database passwords
-API keys
-OAuth secrets
-Webhook credentials
-Private keys
-```
+### 5. Dependency Management
 
-Store local development secrets in `.env` or another appropriate secret-management system.
-
-The repository should contain `.env.example` with empty or placeholder values instead.
-
----
-
-## If a Secret Is Leaked
-
-If a Discord bot token, API key, database password, or other credential is accidentally exposed:
-
-1. Revoke or rotate the credential immediately.
-2. Remove the secret from the source repository where appropriate.
-3. Check whether the credential was accessed or abused.
-4. Review relevant logs.
-5. Notify the maintainers if the exposure affects the project.
-
-**Do not assume that deleting the file or commit is sufficient.**
-
-Credentials exposed in Git history may remain accessible until properly removed and rotated.
-
----
-
-## User and Server Data
-
-The bot may process data required for its features, such as:
-
-* Discord user IDs.
-* Discord guild IDs.
-* Channel IDs.
-* Roles and permissions.
-* Moderation records.
-* Ticket information.
-* Level and XP data.
-* Configuration settings.
-* Game-related data.
-* AI conversation data, when enabled.
-
-Only collect and store data that is necessary for the feature being provided.
-
-Features should not access data belonging to another Discord server unless explicitly authorized by the application's design.
-
----
-
-## Multi-Guild Isolation
-
-The bot is designed to operate across multiple Discord servers.
-
-Guild-specific data must remain isolated.
-
-Database queries involving guild-specific information should validate the relevant `guild_id` and user permissions where applicable.
-
-A feature must never assume that a Discord user, channel, role, ticket, or configuration record belongs to the current guild without verification.
-
----
-
-## Third-Party Services
-
-Some features may communicate with external services, including AI providers and other APIs.
-
-Contributors should:
-
-* Avoid sending unnecessary user data to external services.
-* Avoid placing secrets in URLs or logs.
-* Validate external responses.
-* Handle API failures safely.
-* Respect the terms and security requirements of external providers.
-
-For AI functionality, contributors should be especially careful about sending private server content, ticket contents, or user-provided sensitive information to external providers.
-
----
-
-## Dependency Security
-
-Dependencies should be kept reasonably up to date.
-
-When adding a new dependency:
-
-* Use a well-maintained package when possible.
-* Avoid unnecessary dependencies.
-* Check the package's maintenance status and reputation.
-* Understand what permissions or system access the dependency requires.
-* Keep `uv.lock` updated.
-
-Security-related dependency updates should be prioritized.
-
----
-
-## Logging
-
-Logs must not contain sensitive credentials or secrets.
-
-Never log:
-
-```text
-Discord tokens
-API keys
-Database passwords
-Authorization headers
-Private keys
-```
-
-Be careful when logging user-provided content, ticket messages, moderation records, or AI conversations.
-
-Debug information should not accidentally become a source of sensitive data exposure.
-
----
-
-## Pull Requests and Security Review
-
-Contributors should consider security implications when modifying:
-
-* Permissions.
-* Authentication.
-* Database queries.
-* Ticket access.
-* Moderation commands.
-* File operations.
-* External API integrations.
-* AI context handling.
-* Webhooks.
-* Configuration handling.
-
-Changes involving security-sensitive functionality may require additional maintainer review.
-
----
-
-## Responsible Disclosure
-
-When a vulnerability is reported privately, maintainers will investigate it and determine an appropriate response.
-
-Depending on the severity, the response may include:
-
-* Fixing the vulnerability.
-* Releasing a patched version.
-* Rotating affected credentials.
-* Updating documentation.
-* Notifying affected users or maintainers.
-
-Please allow reasonable time for the issue to be investigated and fixed before publicly disclosing the vulnerability.
-
----
-
-## Security Best Practices for Contributors
-
-Before submitting code, check that:
-
-* No secrets are included.
-* User input is validated.
-* Permissions are explicitly checked.
-* Guild boundaries are respected.
-* Database queries are parameterized through the project's database layer.
-* External API responses are treated as untrusted input.
-* Errors do not expose sensitive implementation details.
-* Logs do not contain credentials or unnecessary private information.
-* New dependencies are justified.
-
----
-
-## Security Contact
-
-For security reports, use the private security contact or reporting mechanism provided by the repository maintainers.
-
-Do not use public GitHub issues for vulnerabilities.
-
-The project's security contact will be documented here once the official reporting channel has been established.
+* Manage dependencies using `uv` with reproducible locks in `uv.lock`.
+* Regularly audit and update project dependencies to resolve known vulnerabilities in upstream packages (`discord.py`, `aiohttp`, `cryptography`, etc.).
+* Review new dependencies carefully before adding them to avoid unmaintained or insecure third-party code.
