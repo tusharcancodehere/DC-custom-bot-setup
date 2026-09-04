@@ -1,0 +1,27 @@
+2026-09-04 23:09:59,912 | WARNING | discord.client | davey is not installed, voice will NOT be supported
+2026-09-04 23:09:59,912 | INFO | discord.client | logging in using static token
+2026-09-04 23:10:00,734 | INFO | root | Loading features...
+2026-09-04 23:10:00,736 | INFO | root | Features loaded
+2026-09-04 23:10:01,561 | INFO | discord.gateway | Shard ID None has connected to Gateway (Session ID: 142dfaec70dcfd76fb2b2efcf73bb4e0).
+2026-09-04 23:10:03,935 | INFO | root | Logged in as Test Subject 001#3483
+2026-09-04 23:10:03,935 | INFO | root | Synced 8 commands
+2026-09-04 23:10:09,251 | ERROR | discord.app_commands.tree | Ignoring exception in command tree
+Traceback (most recent call last):
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1138, in wrapper
+    await self._call(interaction)
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1270, in _call
+    command, options = self._get_app_command_options(data)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1174, in _get_app_command_options
+    raise CommandNotFound(name, parents)
+discord.app_commands.errors.CommandNotFound: Application command 'ping' not found
+2026-09-04 23:10:21,231 | ERROR | discord.app_commands.tree | Ignoring exception in command tree
+Traceback (most recent call last):
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1138, in wrapper
+    await self._call(interaction)
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1270, in _call
+    command, options = self._get_app_command_options(data)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1174, in _get_app_command_options
+    raise CommandNotFound(name, parents)
+discord.app_commands.errors.CommandNotFound: Application command 'ping' not found
