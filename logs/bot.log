@@ -25,3 +25,79 @@ Traceback (most recent call last):
   File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1174, in _get_app_command_options
     raise CommandNotFound(name, parents)
 discord.app_commands.errors.CommandNotFound: Application command 'ping' not found
+2026-09-04 23:19:37,642 | INFO | discord.client | logging in using static token
+2026-09-04 23:19:38,428 | INFO | root | Loading features...
+2026-09-04 23:19:38,434 | INFO | root | Features loaded
+2026-09-04 23:19:39,542 | INFO | discord.gateway | Shard ID None has connected to Gateway (Session ID: 7252447dc96e1e1b3058f11946697d35).
+2026-09-04 23:19:42,003 | INFO | root | Logged in as Test Subject 001#3483
+2026-09-04 23:19:42,003 | INFO | root | Synced 6 commands
+2026-09-04 23:19:50,344 | ERROR | discord.app_commands.tree | Ignoring exception in command 'level'
+Traceback (most recent call last):
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 858, in _do_call
+    return await self._callback(self.binding, interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/src/features/levels/commands.py", line 16, in level_command
+    embed = discord.Embed.from_dict(self.embed_data["embeds"][0])
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/embeds.py", line 251, in from_dict
+    self._timestamp = utils.parse_time(data['timestamp'])
+                      ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/utils.py", line 294, in parse_time
+    return datetime.datetime.fromisoformat(timestamp)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+ValueError: Invalid isoformat string: '{timestamp}'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'level' raised an exception: ValueError: Invalid isoformat string: '{timestamp}'
+2026-09-04 23:21:20,680 | INFO | discord.client | logging in using static token
+2026-09-04 23:21:21,562 | INFO | root | Loading features...
+2026-09-04 23:21:21,566 | INFO | root | Features loaded
+2026-09-04 23:21:22,387 | INFO | discord.gateway | Shard ID None has connected to Gateway (Session ID: 6abd16c30c508f31822fe99dbf55f45a).
+2026-09-04 23:21:25,084 | INFO | root | Logged in as Test Subject 001#3483
+2026-09-04 23:21:25,084 | INFO | root | Synced 6 commands
+2026-09-04 23:21:48,717 | ERROR | discord.app_commands.tree | Ignoring exception in command 'level'
+Traceback (most recent call last):
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 858, in _do_call
+    return await self._callback(self.binding, interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/src/features/levels/commands.py", line 17, in level_command
+    await interaction.response.send_message(embed=embed)
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/interactions.py", line 1085, in send_message
+    data = await adapter.create_interaction_response(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 226, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In data.embeds.0.author.icon_url: Not a well formed URL.
+In data.embeds.0.thumbnail.url: Not a well formed URL.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tushar/Projects/DC-custom-bot-setup/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'level' raised an exception: HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In data.embeds.0.author.icon_url: Not a well formed URL.
+In data.embeds.0.thumbnail.url: Not a well formed URL.
+2026-09-04 23:23:44,216 | INFO | discord.client | logging in using static token
+2026-09-04 23:23:45,177 | INFO | root | Loading features...
+2026-09-04 23:23:45,181 | INFO | root | Features loaded
+2026-09-04 23:23:46,373 | INFO | discord.gateway | Shard ID None has connected to Gateway (Session ID: 00b3473362c65d98f103f755b59975f6).
+2026-09-04 23:23:48,763 | INFO | root | Logged in as Test Subject 001#3483
+2026-09-04 23:23:48,764 | INFO | root | Synced 6 commands
