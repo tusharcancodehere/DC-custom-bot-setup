@@ -143,3 +143,15 @@ connector: <aiohttp.connector.TCPConnector object at 0x7f6dc10d2ba0>
 2026-09-04 23:38:59,732 | INFO | httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
 2026-09-04 23:39:23,387 | INFO | google_genai.models | AFC is enabled with max remote calls: 10.
 2026-09-04 23:39:28,044 | INFO | httpx | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-09-04 23:46:35,335 | INFO | discord.client | logging in using static token
+2026-09-04 23:46:36,266 | INFO | root | Loading features...
+2026-09-04 23:46:37,168 | INFO | root | Features loaded
+2026-09-04 23:46:37,935 | INFO | discord.gateway | Shard ID None has connected to Gateway (Session ID: 0a968638c314ce0c7e2b213f9a009a68).
+2026-09-04 23:46:40,448 | INFO | root | Logged in as Test Subject 001#3483
+2026-09-04 23:46:40,448 | INFO | root | Synced 14 commands
+2026-09-04 23:49:09,267 | INFO | discord.client | logging in using static token
+2026-09-04 23:49:10,927 | INFO | root | Loading features...
+2026-09-04 23:49:11,839 | INFO | root | Features loaded
+2026-09-04 23:49:12,964 | INFO | discord.gateway | Shard ID None has connected to Gateway (Session ID: 03eb73bd8f58ac402fa18b14fc8bef9c).
+2026-09-04 23:49:15,383 | INFO | root | Logged in as Test Subject 001#3483
+2026-09-04 23:49:15,383 | INFO | root | Synced 14 commands

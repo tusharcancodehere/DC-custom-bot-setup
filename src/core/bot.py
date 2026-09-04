@@ -30,6 +30,7 @@ class CustomBot(commands.Bot):
         await self.load_extension("features.levels.commands")
         await self.load_extension("features.general.commands")
         await self.load_extension("features.ai.commands")
+        await self.load_extension("features.moderation.commands")
         logging.info("Features loaded")
 
     async def on_ready(self):
