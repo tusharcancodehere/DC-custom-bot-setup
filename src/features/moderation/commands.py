@@ -7,7 +7,7 @@ from discord.ext import commands
 DEFAULT_REASON = "No reason provided"
 MIN_TIMEOUT_MINUTES = 1
 MIN_PURGE = 1
-MAX_PURGE = 100
+MAX_PURGE = 1000
 
 SUCCESS_COLOR = 0x57F287
 WARNING_COLOR = 0xFEE75C
@@ -20,6 +20,10 @@ class Moderation(commands.Cog):
     @app_commands.command(name="kick", description="Kick a member")
     @app_commands.checks.has_permissions(kick_members=True)
     async def kick_command(self, interaction: discord.Interaction, user: discord.Member, reason: str = DEFAULT_REASON):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         if user == interaction.guild.owner:
             await interaction.response.send_message("You cannot kick the server owner.", ephemeral=True)
             return
@@ -43,6 +47,10 @@ class Moderation(commands.Cog):
     @app_commands.command(name="ban", description="Ban a member")
     @app_commands.checks.has_permissions(ban_members=True)
     async def ban_command(self, interaction: discord.Interaction, user: discord.Member, reason: str = DEFAULT_REASON):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         if user == interaction.guild.owner:
             await interaction.response.send_message("You cannot ban the server owner.", ephemeral=True)
             return
@@ -66,6 +74,10 @@ class Moderation(commands.Cog):
     @app_commands.command(name="timeout", description="Timeout a member")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def timeout_command(self, interaction: discord.Interaction, user: discord.Member, minutes: int, reason: str = DEFAULT_REASON):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         if minutes < MIN_TIMEOUT_MINUTES:
             await interaction.response.send_message("Duration must be at least 1 minute.", ephemeral=True)
             return
@@ -93,8 +105,12 @@ class Moderation(commands.Cog):
     @app_commands.command(name="purge", description="Delete recent messages")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def purge_command(self, interaction: discord.Interaction, amount: int):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         if amount < MIN_PURGE or amount > MAX_PURGE:
-            await interaction.response.send_message("Amount must be between 1 and 100.", ephemeral=True)
+            await interaction.response.send_message(f"Amount must be between {MIN_PURGE} and {MAX_PURGE}.", ephemeral=True)
             return
 
         await interaction.response.defer(ephemeral=True)
@@ -112,6 +128,10 @@ class Moderation(commands.Cog):
     @app_commands.command(name="unban", description="Unban a user")
     @app_commands.checks.has_permissions(ban_members=True)
     async def unban_command(self, interaction: discord.Interaction, user_id: str, reason: str = DEFAULT_REASON):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         try:
             user = await self.bot.fetch_user(int(user_id))
             await interaction.guild.unban(user, reason=reason)
@@ -128,6 +148,10 @@ class Moderation(commands.Cog):
     @app_commands.command(name="warn", description="Warn a member")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def warn_command(self, interaction: discord.Interaction, user: discord.Member, reason: str = DEFAULT_REASON):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         dm_embed = discord.Embed(
             title=f"⚠️ Warning in {interaction.guild.name}",
             description=f"You received a warning from staff.\n\n**Reason:** {reason}",

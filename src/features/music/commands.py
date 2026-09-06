@@ -1,5 +1,6 @@
 import asyncio
 import os
+import random
 
 import discord
 import yt_dlp
@@ -11,6 +12,18 @@ DEFAULT_VOLUME = 1.0
 MIN_VOLUME = 0
 MAX_VOLUME = 100
 MUSIC_COLOR = 0x9B59B6
+RANDOM_SEARCH_GENRES = [
+    "lofi hip hop beats",
+    "synthwave chill",
+    "jazz classics instrumental",
+    "ambient relaxing soundscape",
+    "acoustic guitar chill",
+    "classic rock hits",
+    "piano instrumental melody",
+    "electronic dance hits",
+    "indie rock classics",
+    "deep house chill",
+]
 
 class MusicPlayerView(discord.ui.View):
     def __init__(self, music, guild_id):
@@ -237,7 +250,8 @@ class Music(commands.Cog):
 
         if not queue:
             self.current.pop(guild.id, None)
-            await self.bot.change_presence(activity=None)
+            if not self.current:
+                await self.bot.change_presence(activity=None)
             if not self.is_247(guild.id):
                 await voice.disconnect()
             await self.update_player(guild.id)
@@ -284,15 +298,14 @@ class Music(commands.Cog):
 
         await self.play_next(guild)
 
-    @app_commands.command(name="play", description="Play a song")
-    async def play_command(self, interaction: discord.Interaction, query: str):
+    async def ensure_voice(self, interaction: discord.Interaction):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
+            return None
 
         if not interaction.user.voice:
             await interaction.response.send_message("You must be in a voice channel.", ephemeral=True)
-            return
+            return None
 
         await interaction.response.defer()
 
@@ -304,9 +317,16 @@ class Music(commands.Cog):
                 voice = await channel.connect()
             elif voice.channel != channel:
                 await voice.move_to(channel)
+            return voice
         except Exception as error:
             print(f"Voice error: {error}")
             await interaction.followup.send("I couldn't join the voice channel.")
+            return None
+
+    @app_commands.command(name="play", description="Play a song")
+    async def play_command(self, interaction: discord.Interaction, query: str):
+        voice = await self.ensure_voice(interaction)
+        if not voice:
             return
 
         try:
@@ -319,7 +339,7 @@ class Music(commands.Cog):
         queue = self.get_queue(interaction.guild.id)
         queue.append(song)
 
-        if voice.is_playing():
+        if voice.is_playing() or voice.is_paused():
             embed = discord.Embed(
                 title="🎵 Added to Queue",
                 description=f"**[{song['title']}]({song.get('url')})**",
@@ -334,6 +354,43 @@ class Music(commands.Cog):
             return
 
         await self.play_next(interaction.guild)
+        await self.send_player(interaction, interaction.guild.id)
+
+    @app_commands.command(name="random", description="Play a random music track from the internet")
+    async def random_command(self, interaction: discord.Interaction):
+        voice = await self.ensure_voice(interaction)
+        if not voice:
+            return
+
+        genre = random.choice(RANDOM_SEARCH_GENRES)
+        query = f"{genre} {random.randint(1, 50)}"
+
+        try:
+            song = await self.download_song(query)
+        except Exception as error:
+            print(f"Download error: {error}")
+            await interaction.followup.send(f"Couldn't retrieve a random track: `{error}`")
+            return
+
+        queue = self.get_queue(interaction.guild.id)
+        queue.append(song)
+
+        if voice.is_playing() or voice.is_paused():
+            embed = discord.Embed(
+                title="🎵 Added to Queue",
+                description=f"Added random track to queue: **[{song['title']}]({song.get('url')})**",
+                color=MUSIC_COLOR,
+            )
+            embed.add_field(name="⏱️ Duration", value=self.format_duration(song.get("duration")), inline=True)
+            embed.add_field(name="📍 Position", value=f"#{len(queue)}", inline=True)
+            if song.get("thumbnail"):
+                embed.set_thumbnail(url=song["thumbnail"])
+            await interaction.followup.send(embed=embed)
+            await self.update_player(interaction.guild.id)
+            return
+
+        await self.play_next(interaction.guild)
+        await interaction.followup.send(f"Playing random track: **[{song['title']}]({song.get('url')})**")
         await self.send_player(interaction, interaction.guild.id)
 
     @app_commands.command(name="player", description="Show the music player")
@@ -363,6 +420,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="skip", description="Skip the current song")
     async def skip_command(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         if not voice or not voice.is_playing():
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
@@ -373,6 +434,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="pause", description="Pause the current song")
     async def pause_command(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         if not voice or not voice.is_playing():
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
@@ -383,6 +448,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="resume", description="Resume the current song")
     async def resume_command(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         if not voice or not voice.is_paused():
             await interaction.response.send_message("Nothing is paused.", ephemeral=True)
@@ -393,6 +462,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="stop", description="Stop music and clear the queue")
     async def stop_command(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         queue = self.get_queue(interaction.guild.id)
 
@@ -406,6 +479,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="queue", description="Show the music queue")
     async def queue_command(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         queue = self.get_queue(interaction.guild.id)
         current = self.current.get(interaction.guild.id)
@@ -438,6 +515,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="volume", description="Set the music volume")
     async def volume_command(self, interaction: discord.Interaction, volume: int):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         if not voice:
             await interaction.response.send_message("I'm not in a voice channel.", ephemeral=True)
@@ -455,6 +536,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="leave", description="Leave the voice channel")
     async def leave_command(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
         voice = interaction.guild.voice_client
         queue = self.get_queue(interaction.guild.id)
 

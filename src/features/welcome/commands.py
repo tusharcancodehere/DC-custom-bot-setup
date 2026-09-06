@@ -43,8 +43,12 @@ class Welcome(commands.Cog):
         guild = interaction.guild
         data = raw_data["embeds"][0].copy()
         channel_map = self.resolve_channels(guild)
+        channel_map["server"] = guild.name
+        channel_map["user"] = interaction.user.mention
+        channel_map["member"] = interaction.user.mention
+        channel_map["username"] = interaction.user.name
 
-        title = data.get("title", "Welcome").format(server=guild.name)
+        title = data.get("title", "Welcome").format_map(channel_map)
         description = data.get("description", "").format_map(channel_map)
         server_icon = guild.icon.url if guild.icon else None
 

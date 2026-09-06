@@ -22,7 +22,7 @@ Essential moderation commands with server-side permission checks and role hierar
 * `/ban` — Ban a member from the server with an optional reason.
 * `/unban` — Unban a user by their Discord user ID.
 * `/timeout` — Temporarily timeout/mute a member for a specified duration in minutes.
-* `/purge` — Bulk delete recent channel messages (1–100 messages).
+* `/purge` — Bulk delete recent channel messages (1–1,000 messages).
 * `/warn` — Send a formal direct message warning to a member.
 
 ### 🎵 Music
@@ -56,7 +56,7 @@ Activity and rank tracking components:
 ### ⚙️ General & Utility
 * `/ping` — Check bot connectivity and response status.
 * `!shutdown` — Gracefully shut down the bot (restricted to the bot application owner).
-* **Guild Command Syncing** — Automatically copies and synchronizes slash commands to your target guild upon startup for instantaneous testing.
+* **Global Command Syncing** — Automatically registers and synchronizes slash commands globally across every Discord server where the bot is installed.
 
 ### 🗺️ Planned Features
 Features currently on the roadmap include:
@@ -170,7 +170,6 @@ Open `.env` and fill in your values:
 | :--- | :---: | :--- |
 | `DISCORD_TOKEN` | Yes | Discord Bot token generated from the Discord Developer Portal. |
 | `APPLICATION_ID` | Yes | Discord Application / Client ID. |
-| `SERVER_ID` | Yes | Discord Guild/Server ID where slash commands will be synced immediately. |
 | `DATABASE_URL` | Optional | PostgreSQL asyncpg connection string. If omitted, the bot runs with in-memory state. |
 | `OPENAI_API_KEY` | Optional | API key for OpenAI (`gpt-5-mini`) used by `/ask`. |
 | `GEMINI_API_KEY` | Optional | API key for Google Gemini (`gemini-2.5-flash`) used as a fallback for `/ask`. |
@@ -188,7 +187,7 @@ Run the application using `uv`:
 uv run python src/main.py
 ```
 
-Upon startup, the bot loads active features, registers event listeners, and synchronizes slash commands to the designated guild.
+Upon startup, the bot loads active features, registers event listeners, and synchronizes slash commands globally across all installed servers.
 
 ---
 

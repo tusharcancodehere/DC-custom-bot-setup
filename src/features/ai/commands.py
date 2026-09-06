@@ -28,19 +28,20 @@ class AI(commands.Cog):
     async def ask_command(self, interaction: discord.Interaction, prompt: str):
         await interaction.response.defer()
 
-        user_id = interaction.user.id
-        if user_id not in self.conversations:
-            self.conversations[user_id] = []
+        guild_id = interaction.guild.id if interaction.guild else None
+        key = (guild_id, interaction.user.id)
+        if key not in self.conversations:
+            self.conversations[key] = []
 
-        self.conversations[user_id].append({"role": "user", "content": prompt})
+        self.conversations[key].append({"role": "user", "content": prompt})
 
         try:
             if not self.openai:
                 raise RuntimeError
 
-            response = await self.openai.responses.create(model=OPENAI_MODEL, instructions=SYSTEM_PROMPT, input=self.conversations[user_id])
+            response = await self.openai.responses.create(model=OPENAI_MODEL, instructions=SYSTEM_PROMPT, input=self.conversations[key])
             if response.output_text:
-                self.conversations[user_id].append({"role": "assistant", "content": response.output_text})
+                self.conversations[key].append({"role": "assistant", "content": response.output_text})
                 await interaction.followup.send(response.output_text)
                 return
         except Exception:
@@ -52,13 +53,13 @@ class AI(commands.Cog):
 
             response = self.gemini.models.generate_content(model=GEMINI_MODEL, contents=SYSTEM_PROMPT + "\n\n" + prompt)
             if response.text:
-                self.conversations[user_id].append({"role": "assistant", "content": response.text})
+                self.conversations[key].append({"role": "assistant", "content": response.text})
                 await interaction.followup.send(response.text)
                 return
         except Exception:
             pass
 
-        self.conversations[user_id].pop()
+        self.conversations[key].pop()
         embed = discord.Embed(
             title="❌ AI Temporarily Unavailable",
             description="Both AI providers failed to respond. Please verify API configuration or try again in a moment.",
@@ -68,7 +69,9 @@ class AI(commands.Cog):
 
     @app_commands.command(name="clear", description="Clear your AI conversation")
     async def clear_command(self, interaction: discord.Interaction):
-        self.conversations.pop(interaction.user.id, None)
+        guild_id = interaction.guild.id if interaction.guild else None
+        key = (guild_id, interaction.user.id)
+        self.conversations.pop(key, None)
         embed = discord.Embed(
             title="🧹 Conversation Cleared",
             description="Your AI conversation history has been reset.",

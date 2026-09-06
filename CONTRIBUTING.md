@@ -101,7 +101,6 @@ Open `.env` and fill in your development credentials:
 
 * `DISCORD_TOKEN`: Your bot token from the [Discord Developer Portal](https://discord.com/developers/applications).
 * `APPLICATION_ID`: Your Discord application/client ID.
-* `SERVER_ID`: The ID of your private test Discord server (used for fast slash command syncing).
 * `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, the bot runs with in-memory state. See [docs/database.md](docs/database.md) for details.
 * `OPENAI_API_KEY`: (Optional) OpenAI API key for testing AI commands.
 * `GEMINI_API_KEY`: (Optional) Google Gemini API key for testing AI fallback.
