@@ -39,7 +39,7 @@ To help us investigate and resolve the issue quickly, please include:
 
 ### What to Avoid
 
-* Do **not** include real credentials, Discord bot tokens, server IDs, or API keys in your report.
+* Do **not** include real credentials, Discord bot tokens, server IDs, database passwords, or API keys in your report.
 * Please allow maintainers reasonable time to investigate and patch the issue before disclosing it publicly.
 
 ---
@@ -48,33 +48,39 @@ To help us investigate and resolve the issue quickly, please include:
 
 ### 1. Keeping Secrets Out of Git
 
-* **Never commit secrets to version control.** This includes Discord bot tokens, OpenAI API keys, Google Gemini API keys, database credentials, and webhook URLs.
+* **Never commit secrets to version control.** This includes Discord bot tokens, database connection strings (`DATABASE_URL`), OpenAI API keys, Google Gemini API keys, and webhook URLs.
 * Ensure `.env` is listed in `.gitignore` and never staged for commit.
 * Use `.env.example` as a template containing placeholder values only.
 * If a secret is accidentally committed to Git:
-  1. Revoke and rotate the exposed token or API key immediately.
+  1. Revoke and rotate the exposed token, password, or API key immediately.
   2. Treat any compromised credential as publicly exposed regardless of whether the commit is subsequently removed from Git history.
 
 ### 2. Environment Variables (`.env` Usage)
 
 * All runtime credentials and configuration must be loaded through environment variables using `dotenv` and `os.getenv`.
 * Never hardcode sensitive values directly into source code, test files, or default parameter values.
-* Ensure loggers do not print environment variables, request headers, or config structures that could contain secrets.
+* Ensure loggers do not print environment variables, request headers, database connection strings, or config structures that could contain secrets.
 
-### 3. Discord Permissions and Gateway Intents
+### 3. Database Security & Credentials
+
+* **Connection Strings**: `DATABASE_URL` contains database credentials. Never hardcode fallback credentials or database passwords directly in Python code or configuration defaults.
+* **Network Isolation**: In production, bind PostgreSQL to local loopback (`127.0.0.1`) or private container networks; avoid exposing PostgreSQL port `5432` to the public internet without SSL and strict firewall rules.
+* **SQL Injection Prevention**: Always use SQLAlchemy ORM or parameterized queries via `asyncpg`. Never concatenate raw user input strings directly into SQL statements.
+
+### 4. Discord Permissions and Gateway Intents
 
 * Follow the **principle of least privilege**: request only the Discord permissions and Gateway Intents required for enabled features.
 * Enforce **server-side permission checks** using `@app_commands.checks.has_permissions` and explicit role hierarchy validations. Never rely solely on client-side Discord UI restrictions.
 * Maintain **guild isolation**: ensure all commands and data lookups operate strictly within the context of the calling guild (`interaction.guild`), preventing unauthorized cross-server access.
 
-### 4. API Keys and External Providers
+### 5. API Keys and External Providers
 
 * Safeguard all third-party API credentials (such as OpenAI and Google Gemini).
 * Sanitize and validate external API responses before sending them to Discord channels.
 * Avoid forwarding private channel messages, ticket contents, or personal data to external AI models unless explicitly requested by the user.
 * Implement structured error handling to ensure API downtime or provider failures fail gracefully without exposing sensitive error logs or keys in Discord chat.
 
-### 5. Dependency Management
+### 6. Dependency Management
 
 * Manage dependencies using `uv` with reproducible locks in `uv.lock`.
 * Regularly audit and update project dependencies to resolve known vulnerabilities in upstream packages (`discord.py`, `aiohttp`, `cryptography`, etc.).

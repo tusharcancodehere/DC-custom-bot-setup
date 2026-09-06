@@ -1,7 +1,19 @@
+# Python & Virtual Environments
 .venv/
-.env
 __pycache__/
 *.py[cod]
+*.so
+
+# Environment Variables & Secrets
+.env
+
+# Testing & Tooling Caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Application Logs
+logs/*.log
+
+# Audio Cache
+src/features/music/cache/

@@ -20,6 +20,7 @@ dependencies = [
     "pynacl>=1.6.2",
     "python-dotenv>=1.2.3",
     "sqlalchemy>=2.0.52",
+    "yt-dlp[default]>=2026.8.19",
 ]
 
 [project.scripts]

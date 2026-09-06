@@ -2,23 +2,23 @@
 
 ## Foundation
 
-* [ ] Create bot core
-* [ ] Load environment variables
-* [ ] Implement Discord client
-* [ ] Implement Cog loading
-* [ ] Implement slash command synchronization
-* [ ] Add global error handling
-* [ ] Add application logging
-* [ ] Add permission checks
-* [ ] Add common utilities
-* [ ] Add common Discord embeds/views
+* [x] Create bot core
+* [x] Load environment variables
+* [x] Implement Discord client
+* [x] Implement Cog loading
+* [x] Implement slash command synchronization
+* [x] Add global error handling
+* [x] Add application logging
+* [x] Add permission checks
+* [x] Add common utilities
+* [x] Add common Discord embeds/views
 
 ## Database
 
-* [ ] Configure PostgreSQL
-* [ ] Configure SQLAlchemy
-* [ ] Configure asyncpg
-* [ ] Configure Alembic
+* [x] Configure PostgreSQL connection environment
+* [x] Configure SQLAlchemy async engine and sessionmaker
+* [x] Configure asyncpg driver support
+* [x] Configure Alembic dependency
 * [ ] Create initial database models
 * [ ] Create migration workflow
 * [ ] Add guild configuration model
@@ -35,13 +35,13 @@
 
 ## Moderation
 
-* [ ] Ban
-* [ ] Unban
-* [ ] Kick
-* [ ] Timeout
-* [ ] Warn
+* [x] Ban (`/ban`)
+* [x] Unban (`/unban`)
+* [x] Kick (`/kick`)
+* [x] Timeout (`/timeout`)
+* [x] Warn (`/warn`)
 * [ ] Warning history
-* [ ] Purge messages
+* [x] Purge messages (`/purge`)
 * [ ] Lock channel
 * [ ] Unlock channel
 * [ ] Slowmode
@@ -52,12 +52,12 @@
 
 ## Welcome
 
-* [ ] Welcome message
+* [x] Welcome message embed (`/welcome`)
 * [ ] Leave message
 * [ ] Welcome channel configuration
 * [ ] Leave channel configuration
 * [ ] Auto-role
-* [ ] Custom welcome messages
+* [x] Custom welcome messages (`embed.json`)
 * [ ] Welcome image support
 * [ ] `/welcome setup`
 * [ ] `/welcome test`
@@ -78,15 +78,15 @@
 
 ## Level System
 
-* [ ] XP tracking
+* [x] XP tracking (in-memory)
 * [ ] XP cooldown
-* [ ] Level calculation
-* [ ] Rank command
+* [x] Level calculation
+* [x] Rank card command (`/level`)
 * [ ] Leaderboard
 * [ ] Level-up messages
 * [ ] Level rewards
 * [ ] Role rewards
-* [ ] Level configuration
+* [x] Level configuration (`embed.json`)
 
 ## Games
 
@@ -103,30 +103,31 @@
 
 ## Music
 
-* [ ] Voice connection
-* [ ] Audio playback
-* [ ] Play command
-* [ ] Pause
-* [ ] Resume
-* [ ] Skip
-* [ ] Stop
-* [ ] Queue
-* [ ] Loop
-* [ ] Volume
-* [ ] Now playing
-* [ ] Music error handling
-* [ ] Queue cleanup
+* [x] Voice connection
+* [x] Audio playback (yt-dlp + FFmpeg)
+* [x] Play command (`/play`)
+* [x] Pause (`/pause`)
+* [x] Resume (`/resume`)
+* [x] Skip (`/skip`)
+* [x] Stop (`/stop`)
+* [x] Queue (`/queue`)
+* [x] 24/7 voice mode (`/247`)
+* [x] Volume (`/volume`)
+* [x] Now playing player view (`/player`)
+* [x] Music error handling
+* [x] Queue cleanup
 
 ## AI
 
-* [ ] OpenAI integration
-* [ ] AI command
-* [ ] Conversation handling
-* [ ] Message/context handling
-* [ ] AI response limits
-* [ ] Error handling
-* [ ] AI configuration
-* [ ] Conversation history
+* [x] OpenAI integration (`gpt-5-mini`)
+* [x] Google Gemini fallback (`gemini-2.5-flash`)
+* [x] AI command (`/ask`)
+* [x] Conversation handling
+* [x] Message/context handling
+* [x] AI response limits
+* [x] Error handling
+* [x] AI configuration
+* [x] Conversation history reset (`/clear`)
 * [ ] AI moderation tools
 * [ ] Ticket AI assistant
 
@@ -135,23 +136,23 @@
 * [ ] Add pytest tests
 * [ ] Add Ruff configuration
 * [ ] Add type checking
-* [ ] Improve logging
-* [ ] Add structured error messages
+* [x] Improve logging
+* [x] Add structured error messages
 * [ ] Test database operations
 * [ ] Test major feature logic
 
 ## Documentation
 
-* [ ] Complete README
-* [ ] Write CONTRIBUTING.md
-* [ ] Add CODE_OF_CONDUCT.md
-* [ ] Add SECURITY.md
-* [ ] Document environment variables
-* [ ] Document bot permissions
-* [ ] Document Discord intents
-* [ ] Document PostgreSQL setup
-* [ ] Document local development
-* [ ] Document feature development
+* [x] Complete README
+* [x] Write CONTRIBUTING.md
+* [x] Add CODE_OF_CONDUCT.md
+* [x] Add SECURITY.md
+* [x] Document environment variables
+* [x] Document bot permissions
+* [x] Document Discord intents
+* [x] Document PostgreSQL setup (`docs/database.md`)
+* [x] Document local development
+* [x] Document feature development
 
 ## Deployment
 

@@ -2,8 +2,8 @@
   "embeds": [
     {
       "title": "⚡ {username}'s Level",
-      "description": "Keep chatting and keep climbing!\n\n**Level:** `{level}`\n**XP:** `{xp} / {next_xp}`\n**Rank:** `#{rank}`\n\n**Progress**\n{progress_bar}",
-      "color": 7829115,
+      "description": "Keep chatting and climbing the ranks!\n\n🏆 **Rank:** `#{rank}`\n⭐ **Level:** `{level}`\n✨ **Experience:** `{xp} / {next_xp} XP`\n\n**Progress to Level {next_level}**\n`{progress_bar}` {percentage}%\n",
+      "color": 5793266,
       "author": {
         "name": "{server}",
         "icon_url": "{server_icon}"
@@ -12,7 +12,8 @@
         "url": "{user_avatar}"
       },
       "footer": {
-        "text": "Keep going • Next level: {next_level}"
+        "text": "{server} • Level System",
+        "icon_url": "{server_icon}"
       }
     }
   ]

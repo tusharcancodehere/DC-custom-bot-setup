@@ -1,19 +1,39 @@
-import os
 import logging
+import os
+
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(filename="logs/bot.log", level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+COMMAND_PREFIX = "!"
+LOG_FILE = "logs/bot.log"
+LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+EXTENSIONS = [
+    "features.welcome.commands",
+    "features.levels.commands",
+    "features.general.commands",
+    "features.ai.commands",
+    "features.moderation.commands",
+    "features.music.commands",
+]
+
+# Load Opus for voice support if available
+if not discord.opus.is_loaded():
+    try:
+        discord.opus.load_opus("libopus.so.0")
+    except Exception:
+        pass
+
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format=LOG_FORMAT)
 
 class CustomBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
-        super().__init__(command_prefix="!", intents=intents, application_id=int(os.getenv("APPLICATION_ID")))
+        super().__init__(command_prefix=COMMAND_PREFIX, intents=intents, application_id=int(os.getenv("APPLICATION_ID")))
         self.token = os.getenv("DISCORD_TOKEN")
         self.server_id = int(os.getenv("SERVER_ID"))
 
@@ -26,11 +46,8 @@ class CustomBot(commands.Bot):
 
     async def setup_hook(self):
         logging.info("Loading features...")
-        await self.load_extension("features.welcome.commands")
-        await self.load_extension("features.levels.commands")
-        await self.load_extension("features.general.commands")
-        await self.load_extension("features.ai.commands")
-        await self.load_extension("features.moderation.commands")
+        for extension in EXTENSIONS:
+            await self.load_extension(extension)
         logging.info("Features loaded")
 
     async def on_ready(self):

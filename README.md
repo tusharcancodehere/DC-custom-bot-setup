@@ -2,7 +2,7 @@
 
 A modular, open-source Discord bot built with Python 3.13 and [`discord.py`](https://github.com/Rapptz/discord.py).
 
-DC Custom Bot provides server moderation, community engagement, leveling, general utilities, and dual-provider AI assistance in a single configurable bot. The project is designed with a lightweight, modular architecture so developers can easily understand the codebase, add new features, and contribute.
+DC Custom Bot provides server moderation, community engagement, leveling, music playback, general utilities, and dual-provider AI assistance in a single configurable bot. The project is designed with a clean, modular architecture so developers can easily understand the codebase, add new features, and contribute.
 
 ---
 
@@ -10,7 +10,7 @@ DC Custom Bot provides server moderation, community engagement, leveling, genera
 
 > **Status:** Active Early Development
 
-Core bot infrastructure, moderation tools, welcome embeds, level displays, and AI conversation commands are functional. Additional systems—including support tickets, entertainment mini-games, voice/music playback, and PostgreSQL database models—are currently under development. Track ongoing progress and upcoming milestones in [`TODO.md`](TODO.md).
+Core bot infrastructure, moderation tools, welcome embeds, level displays, music streaming, and AI conversation commands are fully functional. Current active features operate with in-memory state. Persistent PostgreSQL models, database migrations, support tickets, and entertainment mini-games are on the active roadmap. Track ongoing progress and upcoming milestones in [`TODO.md`](TODO.md).
 
 ---
 
@@ -24,6 +24,19 @@ Essential moderation commands with server-side permission checks and role hierar
 * `/timeout` — Temporarily timeout/mute a member for a specified duration in minutes.
 * `/purge` — Bulk delete recent channel messages (1–100 messages).
 * `/warn` — Send a formal direct message warning to a member.
+
+### 🎵 Music
+Local voice channel audio playback and queue management powered by `yt-dlp` and FFmpeg:
+* `/play` — Search YouTube or provide a direct audio URL to play in voice.
+* `/pause` — Pause current playback.
+* `/resume` — Resume paused audio.
+* `/skip` — Skip the current track to play the next song in the queue.
+* `/stop` — Stop playback and clear the guild queue.
+* `/queue` — View currently queued tracks with duration and requester details.
+* `/volume` — Adjust audio volume (1–100%).
+* `/player` — Display an interactive music player embed with live status.
+* `/leave` — Disconnect the bot from the voice channel.
+* `/247` — Toggle 24/7 mode to keep the bot connected in voice even when idle.
 
 ### 🤖 AI Assistant
 Integrated conversational AI powered by dual providers with automated fallback:
@@ -49,7 +62,6 @@ Activity and rank tracking components:
 Features currently on the roadmap include:
 * Support ticket panels, claiming, and transcript generation.
 * Interactive games (Coinflip, Dice, RPS, 8Ball, Trivia, Tic-Tac-Toe, Connect Four, Blackjack).
-* Voice channel audio and music streaming.
 * Persistent database models and migrations with PostgreSQL, SQLAlchemy, and Alembic.
 
 ---
@@ -60,9 +72,11 @@ Features currently on the roadmap include:
 | :--- | :--- | :--- |
 | **Python** | `>= 3.13` | Core programming language |
 | **discord.py** | `>= 2.7.1` | Discord API wrapper and bot framework |
+| **yt-dlp** | `>= 2026.8.19` | Audio streaming and metadata extraction |
+| **PyNaCl** | `>= 1.6.2` | Voice support encryption library |
+| **FFmpeg** | System binary | Audio decoding and transcode pipeline |
 | **uv** | Latest | Fast Python package and dependency manager |
-| **mise** | Latest | Tool and runtime version management |
-| **PostgreSQL** | `>= 15` | Relational database for persistent storage |
+| **PostgreSQL** | `>= 15` | Relational database for persistent storage (planned models) |
 | **SQLAlchemy** | `>= 2.0.52` | Asynchronous ORM and SQL toolkit |
 | **asyncpg** | `>= 0.31.0` | High-performance PostgreSQL asynchronous driver |
 | **Alembic** | `>= 1.19.1` | Database schema migrations |
@@ -70,9 +84,6 @@ Features currently on the roadmap include:
 | **Google GenAI** | `>= 2.22.0` | Google Gemini API client for fallback AI features |
 | **Pillow** | `>= 12.3.0` | Image processing (rank cards and welcome graphics) |
 | **Jinja2** | `>= 3.1.6` | Template rendering (transcripts and HTML exports) |
-| **PyNaCl** | `>= 1.6.2` | Voice support encryption library |
-| **Ruff** | Latest | Code formatting and linting |
-| **pytest** | Latest | Automated testing framework |
 
 ---
 
@@ -90,31 +101,32 @@ DC-custom-bot-setup/
 │   │   ├── logging.py       # Central application logging
 │   │   └── permissions.py   # Permission checks and decorators
 │   ├── features/            # Independent, modular bot features
-│   │   ├── admin/           # Server administration commands
+│   │   ├── admin/           # Server administration commands (planned)
 │   │   ├── ai/              # AI commands (/ask, /clear)
-│   │   ├── games/           # Mini-games and entertainment
+│   │   ├── games/           # Mini-games and entertainment (planned)
 │   │   ├── general/         # General utility commands (/ping)
 │   │   ├── levels/          # XP tracking and rank cards (/level, /show_xp)
 │   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, etc.)
 │   │   ├── music/           # Audio playback and queue management
-│   │   ├── tickets/         # Support ticket system
+│   │   ├── tickets/         # Support ticket system (planned)
 │   │   └── welcome/         # Welcome messages and templates (/welcome)
 │   ├── views/               # Shared Discord UI components (buttons, modals)
 │   │   └── common.py
 │   └── database/            # Database engine and session management
 │       └── database.py
-├── alembic/                 # Database schema migration scripts
-├── docs/                    # In-depth architectural and developer documentation
+├── alembic/                 # Database schema migration scripts (planned)
+├── docs/                    # Architectural and developer documentation
+│   └── database.md          # Database setup and configuration guide
 ├── scripts/                 # Maintenance and utility scripts
 ├── tests/                   # Test suite
 ├── .env.example             # Template for required environment variables
 ├── pyproject.toml           # Project metadata, dependencies, and script definitions
 ├── uv.lock                  # Pinned dependency lockfile
-├── mise.toml                # Runtime tool versions
 ├── LICENSE                  # MIT License
 ├── CONTRIBUTING.md          # Contribution guidelines
 ├── CODE_OF_CONDUCT.md       # Contributor Code of Conduct
 ├── SECURITY.md              # Security policy and disclosure process
+├── TODO.md                  # Project roadmap and completed tasks
 └── README.md                # Project documentation overview
 ```
 
@@ -126,7 +138,7 @@ DC-custom-bot-setup/
 
 * **Python 3.13+**
 * [**uv**](https://docs.astral.sh/uv/)
-* [**mise**](https://mise.jdx.dev/) (optional, recommended for managing Python versions)
+* [**FFmpeg**](https://ffmpeg.org/) (required for voice and music playback)
 * **Git**
 
 ### 1. Clone the Repository
@@ -136,15 +148,7 @@ git clone https://github.com/tusharcancodehere/DC-custom-bot-setup.git
 cd DC-custom-bot-setup
 ```
 
-### 2. Install Development Tools
-
-If using `mise`:
-
-```bash
-mise install
-```
-
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 Install all project dependencies into a virtual environment using `uv`:
 
@@ -152,7 +156,7 @@ Install all project dependencies into a virtual environment using `uv`:
 uv sync
 ```
 
-### 4. Configure Environment Variables
+### 3. Configure Environment Variables
 
 Create your local `.env` configuration file from the template:
 
@@ -160,19 +164,14 @@ Create your local `.env` configuration file from the template:
 cp .env.example .env
 ```
 
-Open `.env` and fill in your values.
-
----
-
-## Environment Variables
-
-The bot reads configuration settings from environment variables. Define these in your `.env` file:
+Open `.env` and fill in your values:
 
 | Variable | Required | Description |
 | :--- | :---: | :--- |
 | `DISCORD_TOKEN` | Yes | Discord Bot token generated from the Discord Developer Portal. |
 | `APPLICATION_ID` | Yes | Discord Application / Client ID. |
 | `SERVER_ID` | Yes | Discord Guild/Server ID where slash commands will be synced immediately. |
+| `DATABASE_URL` | Optional | PostgreSQL asyncpg connection string. If omitted, the bot runs with in-memory state. |
 | `OPENAI_API_KEY` | Optional | API key for OpenAI (`gpt-5-mini`) used by `/ask`. |
 | `GEMINI_API_KEY` | Optional | API key for Google Gemini (`gemini-2.5-flash`) used as a fallback for `/ask`. |
 
@@ -186,39 +185,28 @@ The bot reads configuration settings from environment variables. Define these in
 Run the application using `uv`:
 
 ```bash
-uv run python -m src.main
+uv run python src/main.py
 ```
 
 Upon startup, the bot loads active features, registers event listeners, and synchronizes slash commands to the designated guild.
 
 ---
 
-## Development
+## Database & Persistence
 
-Install development dependencies:
+The bot includes an asynchronous database engine configured in [`src/database/database.py`](src/database/database.py) using SQLAlchemy 2.0 and `asyncpg`.
 
-```bash
-uv sync --dev
-```
+* **In-Memory Default**: Current active features run in-memory and do not require a running database instance to start.
+* **Persistent Storage**: For running PostgreSQL locally or connecting to an external database, refer to the [**Database Guide**](docs/database.md).
 
-### Linting and Code Formatting
+---
 
-We use [Ruff](https://docs.astral.sh/ruff/) to maintain code quality:
+## Verification & Code Quality
 
-```bash
-# Check code for linting issues
-uv run ruff check .
-
-# Automatically format code
-uv run ruff format .
-```
-
-### Running Tests
-
-Run the automated test suite using `pytest`:
+Verify that all Python source files compile cleanly without syntax errors:
 
 ```bash
-uv run pytest
+uv run python -m compileall -q src
 ```
 
 ---
