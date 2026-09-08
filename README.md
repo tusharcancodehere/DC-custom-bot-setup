@@ -25,8 +25,13 @@ Member and message moderation commands equipped with permission checks, role hie
 * `/unban` — Unban a user by their Discord user ID with an optional reason.
 * `/timeout` — Temporarily timeout a member for a specified duration in minutes with an optional reason.
 * `/purge` — Bulk delete recent channel messages (1–1,000 messages).
-* `/warn` — Send a formal direct message warning to a member with an optional reason.
-* **Security & Hierarchy Checks**: Prevents actions against server owners, the bot itself, or members with equal or higher roles. Enforces server-side permissions (`has_permissions`).
+* `/warn` — Send a formal direct message warning to a member, recording the incident in their server history.
+* `/warnings` — View full warning history and case log for a member in this server.
+* `/clear_warnings` — Clear all recorded warnings for a member in this server.
+* `/lock` — Lock a text channel to prevent regular members from sending messages.
+* `/unlock` — Unlock a locked text channel, restoring member chat permissions.
+* `/slowmode` — Configure or disable chat cooldown delay for a channel (up to 6 hours).
+* **Security & Hierarchy Checks**: Prevents actions against server owners, the bot itself, or members with equal or higher roles across all moderation commands. Enforces server-side permissions (`has_permissions`).
 
 ### 👑 Administration
 Server and bot administrative tools (kept strictly separate from member punishments):
