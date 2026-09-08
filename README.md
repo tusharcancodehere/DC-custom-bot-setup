@@ -320,17 +320,41 @@ A [Dockerfile](Dockerfile) is included for containerized environments:
 
 ---
 
+### Option 4: Docker Compose (Bot + PostgreSQL)
+
+A [`docker-compose.yml`](docker-compose.yml) is included to run the bot alongside a healthy, persistent PostgreSQL database container:
+
+1. **Configure credentials**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your DISCORD_TOKEN and APPLICATION_ID
+   ```
+2. **Start the bot and database**:
+   ```bash
+   docker compose up -d
+   ```
+3. **View live logs**:
+   ```bash
+   docker compose logs -f bot
+   ```
+4. **Stop the stack**:
+   ```bash
+   docker compose down
+   ```
+
+---
+
 ## Verification & Code Quality
 
-Verify that all Python source files compile cleanly without syntax errors:
+Verify that all Python source files compile cleanly and tests pass:
 
-* Using `uv`:
+* **Compile check**:
   ```bash
   uv run python -m compileall -q src
   ```
-* Using standard Python:
+* **Run test suite**:
   ```bash
-  python -m compileall -q src
+  uv run python -m unittest discover -s tests -v
   ```
 
 ---
