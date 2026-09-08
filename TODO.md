@@ -57,8 +57,11 @@ This document is the source of truth for project progress, tracking implemented 
 
 ### Welcome
 * [x] Welcome announcement command (`/welcome`)
+* [x] Server-configurable welcome channel command (`/set_welcome_channel`)
+* [x] Automatic member join event listener (`on_member_join`)
+* [x] Member leave announcement listener (`on_member_remove`)
 * [x] JSON-based welcome embed template ([`src/features/welcome/embed.json`](src/features/welcome/embed.json))
-* [x] Dynamic channel mention placeholders (`{rules}`, `{roles}`, `{general}`, `{support}`)
+* [x] Dynamic channel mention placeholders (`{rules}`, `{roles}`, `{announcements}`, `{general}`, `{support}`)
 
 ### AI Assistant
 * [x] Conversational AI command (`/ask`)
@@ -105,9 +108,6 @@ This document is the source of truth for project progress, tracking implemented 
 * [ ] Automated spam and invite link filtering
 
 ### Advanced Welcome
-* [ ] Automatic member join event listener
-* [ ] Member leave announcement listener
-* [ ] Server-configurable welcome channel
 * [ ] Auto-role assignment for new members
 * [ ] Dynamic banner image generation
 
