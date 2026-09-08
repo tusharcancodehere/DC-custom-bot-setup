@@ -47,8 +47,8 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Channel lockdown and restore commands (`/lock`, `/unlock`)
 * [x] Channel slowmode management command (`/slowmode`)
 * [x] Optional moderation reasons for all actions
-* [x] Server-side Discord permission checks (`has_permissions`)
-* [x] Role hierarchy protection across all moderation actions (owner, bot, equal/higher roles)
+* [x] Server-side Discord permission checks (`has_permissions` and `bot_has_permissions`)
+* [x] Role hierarchy protection across all moderation actions (owner, bot, equal/higher roles, owner bypass)
 * [x] Direct message delivery to warned members
 
 ### Level System
@@ -59,15 +59,16 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Interactive rank card commands (`/level`, `/rank`)
 * [x] Server top 10 leaderboard command (`/leaderboard`)
 * [x] Detailed XP breakdown command (`/show_xp`)
+* [x] Opt-in level-up announcements configuration (`/levelup enable`, `/levelup disable`, `/levelup status`)
 * [x] Admin XP management commands (`/add_xp`, `/remove_xp`, `/set_xp`)
-* [x] Level-up announcement messages in chat
+* [x] Level-up announcement messages in chat (disabled by default)
 * [x] Customizable rank card embed styling ([`src/features/levels/embed.json`](src/features/levels/embed.json))
 
 ### Welcome
-* [x] Welcome announcement command (`/welcome`)
+* [x] Welcome announcement preview command (`/welcome`)
 * [x] Server-configurable welcome channel command (`/set_welcome_channel`)
-* [x] Automatic member join event listener (`on_member_join`)
-* [x] Member leave announcement listener (`on_member_remove`)
+* [x] Opt-in member join event listener (`on_member_join` - disabled until channel configured)
+* [x] Opt-in member leave announcement listener (`on_member_remove` - disabled until channel configured)
 * [x] JSON-based welcome embed template ([`src/features/welcome/embed.json`](src/features/welcome/embed.json))
 * [x] Dynamic channel mention placeholders (`{rules}`, `{roles}`, `{announcements}`, `{general}`, `{support}`)
 
