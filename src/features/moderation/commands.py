@@ -36,6 +36,17 @@ class Moderation(commands.Cog):
         else:
             await interaction.followup.send(message, ephemeral=True)
 
+    async def _log_action(self, guild: discord.Guild, embed: discord.Embed):
+        """Send a copy of moderation action embed to the configured modlog channel if present."""
+        admin_cog = self.bot.get_cog("Admin")
+        if admin_cog and hasattr(admin_cog, "get_modlog_channel"):
+            channel = admin_cog.get_modlog_channel(guild)
+            if channel and guild.me and channel.permissions_for(guild.me).send_messages:
+                try:
+                    await channel.send(embed=embed)
+                except Exception:
+                    pass
+
     def _check_hierarchy(self, interaction: discord.Interaction, target: discord.Member) -> str | None:
         """Verify role hierarchy so moderators cannot target server owner, bot, or equals/superiors."""
         if target == interaction.guild.owner:
@@ -69,6 +80,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="📄 Reason", value=reason, inline=False)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="ban", description="Ban a member from the server")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -91,6 +103,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="📄 Reason", value=reason, inline=False)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="unban", description="Unban a user by their user ID")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -109,6 +122,7 @@ class Moderation(commands.Cog):
             embed.add_field(name="📄 Reason", value=reason, inline=False)
             embed.timestamp = discord.utils.utcnow()
             await interaction.response.send_message(embed=embed)
+            await self._log_action(interaction.guild, embed)
         except (ValueError, discord.NotFound):
             await interaction.response.send_message("❌ User not found or is not banned.", ephemeral=True)
 
@@ -139,6 +153,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="📄 Reason", value=reason, inline=False)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="warn", description="Issue a formal warning to a member")
     @app_commands.checks.has_permissions(moderate_members=True)
@@ -192,6 +207,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="📄 Reason", value=reason, inline=False)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="warnings", description="View warning history for a member")
     @app_commands.checks.has_permissions(moderate_members=True)
@@ -255,6 +271,7 @@ class Moderation(commands.Cog):
         embed = discord.Embed(title="🔒 Channel Locked", description=f"{target.mention} has been locked by staff.", color=ERROR_COLOR)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="unlock", description="Unlock a channel allowing regular members to send messages")
     @app_commands.describe(channel="The channel to unlock (defaults to current channel)")
@@ -272,6 +289,7 @@ class Moderation(commands.Cog):
         embed = discord.Embed(title="🔓 Channel Unlocked", description=f"{target.mention} has been unlocked by staff.", color=SUCCESS_COLOR)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="slowmode", description="Set or disable slowmode delay in a channel")
     @app_commands.describe(seconds="Slowmode cooldown in seconds (0 to disable)", channel="Target channel")
@@ -296,6 +314,7 @@ class Moderation(commands.Cog):
         embed = discord.Embed(title="⏱️ Slowmode Updated", description=desc, color=SUCCESS_COLOR)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+        await self._log_action(interaction.guild, embed)
 
     @app_commands.command(name="purge", description="Bulk delete recent messages")
     @app_commands.checks.has_permissions(manage_messages=True)
