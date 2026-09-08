@@ -32,7 +32,7 @@ DC-custom-bot-setup/
 │   │   ├── ai/              # AI conversation commands (/ask, /clear)
 │   │   ├── games/           # Mini-games and entertainment (/coinflip, /roll, /8ball, /rps, /trivia)
 │   │   ├── general/         # General utility commands (/ping)
-│   │   ├── levels/          # Multi-server level system (/level, /rank, /leaderboard, etc.)
+│   │   ├── levels/          # Multi-server level system (/level, /rank, /leaderboard, /levelup, etc.)
 │   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, /purge, /warn, /lock, /unlock, /slowmode)
 │   │   ├── music/           # Music streaming and playback (/play, /player, /queue, etc.)
 │   │   ├── tickets/         # Support ticket system (/ticket_panel, /ticket_close, /ticket_delete)

@@ -31,7 +31,7 @@ Member and message moderation commands equipped with permission checks, role hie
 * `/lock` — Lock a text channel to prevent regular members from sending messages.
 * `/unlock` — Unlock a locked text channel, restoring member chat permissions.
 * `/slowmode` — Configure or disable chat cooldown delay for a channel (up to 6 hours).
-* **Security & Hierarchy Checks**: Prevents actions against server owners, the bot itself, or members with equal or higher roles across all moderation commands. Enforces server-side permissions (`has_permissions`).
+* **Security & Hierarchy Checks**: Enforces server-side permissions for both the invoker (`has_permissions`) and the bot (`bot_has_permissions`). Strictly protects against targeting server owners, the bot itself, or members with equal or higher roles than the invoker or bot. Server owners bypass invoker role hierarchy restrictions when disciplining other members, but cannot moderate themselves.
 
 ### 👑 Administration
 Server and bot administrative tools (kept strictly separate from member punishments):
@@ -48,10 +48,13 @@ Server activity and XP system designed for clean multi-server operation:
 * `/rank` — Alias to view your server rank and experience.
 * `/leaderboard` — View the top 10 most active members in the current server.
 * `/show_xp` — View detailed experience breakdown and progress toward the next level milestone.
+* `/levelup enable` — Enable celebratory level-up announcement cards in this server (`Manage Server` required).
+* `/levelup disable` — Disable level-up announcement cards in this server (`Manage Server` required).
+* `/levelup status` — Check current level-up announcement setting for this server.
 * `/add_xp` — Add experience points to a member (Admin).
 * `/remove_xp` — Remove experience points from a member without dropping below 0 (Admin).
 * `/set_xp` — Set a member's experience points directly (Admin).
-* **Multi-Server Isolation**: XP is strictly isolated per server and user. Member XP in Server A never affects Server B. Includes 60-second anti-spam cooldowns and level-up celebration messages.
+* **Multi-Server Isolation & Opt-In Announcements**: XP is strictly isolated per server and user. Member XP in Server A never affects Server B. Includes 60-second anti-spam cooldowns. Level-up announcements are opt-in (disabled by default) so servers level up silently until an administrator runs `/levelup enable`.
 
 ### 🤖 AI Assistant
 Conversational AI powered by dual providers with automated fallback:
@@ -60,10 +63,10 @@ Conversational AI powered by dual providers with automated fallback:
 * **Context & Formatting**: Maintains per-server, per-user in-memory conversation history with token bounding, instructs models to provide concise and direct responses, and safely splits long responses across Discord message length limits (>1900 chars).
 
 ### 👋 Welcome System
-Server greeting and onboarding announcements:
-* `/welcome` — Displays a formatted welcome embed loaded from [`embed.json`](src/features/welcome/embed.json).
-* `/set_welcome_channel` — Configure or view the designated channel for automatic welcome messages (`Manage Server` permission required).
-* **Automatic Join & Leave Events**: Greets incoming members automatically with their avatar, server name, and channel mentions; posts polite farewell notifications on member leave.
+Server greeting and onboarding announcements (strictly opt-in):
+* `/welcome` — Displays a preview of the welcome embed loaded from [`embed.json`](src/features/welcome/embed.json) (available in any server as a manual test command).
+* `/set_welcome_channel` — Configure or view the designated channel for automatic welcome messages (`Manage Server` permission required). Setting this channel enables automatic welcome and leave announcements for the server.
+* **Opt-In Join & Leave Events**: Welcome and leave announcements are disabled by default for every guild and only fire when a welcome channel has been explicitly configured. Greets incoming members automatically with their avatar, server name, and channel mentions; posts polite farewell notifications on member leave.
 * **Dynamic Placeholders**: Supports clickable Discord channel placeholders such as `{rules}`, `{roles}`, `{announcements}`, `{general}`, and `{support}` that resolve to server channels dynamically.
 
 ### 🎵 Music Streaming
