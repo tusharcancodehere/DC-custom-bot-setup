@@ -2,15 +2,15 @@
 
 A beginner-friendly, modular open-source Discord bot built with Python and [`discord.py`](https://github.com/Rapptz/discord.py).
 
-DC Custom Bot is an early-stage open-source Discord bot providing server moderation, dual-provider conversational AI, customizable welcome embeds, and general utilities in a clean, non-overengineered architecture. Additional features such as persistent leveling, music playback, and database storage are actively in progress.
+DC Custom Bot is a coherent, feature-complete open-source Discord bot providing server moderation, administration tools, dual-provider conversational AI, audio streaming, multi-server leveling, customizable welcome embeds, and general utilities in a clean, non-overengineered architecture.
 
 ---
 
 ## Current Status
 
-> **Status:** Early-Stage / Active Development
+> **Status:** Active Development & Production-Ready Features
 
-The core features listed below are currently implemented, functional, and ready to use. Advanced capabilities such as database persistence and music streaming are actively in development or planned.
+The core features listed below are fully implemented, tested, and ready to use in production. Database persistence and additional mini-games/tickets are actively planned.
 
 Track upcoming features and active milestones in [`TODO.md`](TODO.md).
 
@@ -66,6 +66,20 @@ Server greeting and onboarding announcements:
 * **Automatic Join & Leave Events**: Greets incoming members automatically with their avatar, server name, and channel mentions; posts polite farewell notifications on member leave.
 * **Dynamic Placeholders**: Supports clickable Discord channel placeholders such as `{rules}`, `{roles}`, `{announcements}`, `{general}`, and `{support}` that resolve to server channels dynamically.
 
+### 🎵 Music Streaming
+High-quality voice channel audio streaming powered by `yt-dlp` and FFmpeg with interactive controls:
+* `/play` — Search YouTube or stream directly from a web URL into your voice channel.
+* `/random` — Discover and play a random music track from popular genres (lo-fi, jazz, synthwave, acoustic, rock).
+* `/player` — Display an interactive player dashboard with Discord button controls (Pause/Resume, Skip, Stop, 24/7, Leave).
+* `/pause` & `/resume` — Pause and resume audio playback.
+* `/skip` — Advance to the next queued track.
+* `/stop` — Stop playback and clear the guild queue.
+* `/queue` — View the current queue of upcoming tracks and playback progress.
+* `/volume` — Adjust playback loudness between 0% and 100%.
+* `/leave` — Disconnect the bot from voice and clear the queue.
+* `/247` — Toggle 24/7 continuous voice connection mode.
+* **Resilient Audio Pipeline**: Runs yt-dlp in a background worker thread, cleans cached audio upon completion, and translates streaming errors into helpful user messages.
+
 ### ⚙️ General & Utility
 Core maintenance and diagnostic commands:
 * `/ping` — Check bot connectivity, WebSocket response latency, and operational status.
@@ -74,11 +88,10 @@ Core maintenance and diagnostic commands:
 
 ---
 
-## In-Progress & Planned Features
+## Planned Features
 
-The following features are currently scaffolded or planned on our roadmap:
+The following features are planned on our roadmap:
 
-* **🎵 Music Playback (In Progress)**: Voice channel streaming powered by `yt-dlp` and FFmpeg, playback queues, and interactive player controls (`/play`, `/player`, etc.).
 * **🗄️ Database Persistence (Planned)**: PostgreSQL and SQLAlchemy 2.0 integration with Alembic schema migrations for persistent server configuration and long-term XP storage across bot restarts.
 * **🎫 Support Tickets (Planned)**: Ticket creation buttons, private support channels, and transcript archives.
 * **🎲 Mini-Games (Planned)**: Interactive server games such as coin flip, dice roll, rock-paper-scissors, and trivia.
@@ -95,7 +108,7 @@ The following features are currently scaffolded or planned on our roadmap:
 | **Google GenAI** (`>= 2.22.0`) | Fallback AI provider for `/ask` | [Google GenAI Docs](https://ai.google.dev/) |
 | **uv** | Fast Python package and project manager | [uv Docs](https://docs.astral.sh/uv/) |
 | **SQLAlchemy / asyncpg / Alembic** | Database dependencies (for planned persistence) | [SQLAlchemy Docs](https://docs.sqlalchemy.org/) |
-| **yt-dlp / FFmpeg** | Audio dependencies (for in-progress music features) | [yt-dlp Docs](https://github.com/yt-dlp/yt-dlp) |
+| **yt-dlp / FFmpeg** | Audio streaming dependencies | [yt-dlp Docs](https://github.com/yt-dlp/yt-dlp) |
 
 ---
 
@@ -113,12 +126,13 @@ DC-custom-bot-setup/
 │   │   ├── logging.py       # Centralized application logging
 │   │   └── permissions.py   # Permission checks and decorators
 │   ├── features/            # Modular bot features
+│   │   ├── admin/           # Administrative tools (/serverinfo, /botinfo, /announce)
 │   │   ├── ai/              # AI assistant (/ask, /clear)
 │   │   ├── general/         # General utility commands (/ping)
-│   │   ├── levels/          # Level system (in progress)
+│   │   ├── levels/          # Level system (/level, /rank, /leaderboard)
 │   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, /purge, /warn)
-│   │   ├── music/           # Music streaming (in progress)
-│   │   └── welcome/         # Welcome embed templates (/welcome)
+│   │   ├── music/           # Music streaming (/play, /player, /queue)
+│   │   └── welcome/         # Welcome announcements & member events (/welcome)
 │   ├── views/               # Shared Discord UI components
 │   │   └── common.py
 │   └── database/            # Database engine and models (for planned persistence)

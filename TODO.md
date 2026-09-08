@@ -82,20 +82,18 @@ This document is the source of truth for project progress, tracking implemented 
 
 ---
 
-## In Progress
-
 ### Music
-* [ ] Voice channel connection and lifecycle management
-* [ ] Audio streaming via yt-dlp and FFmpeg
-* [ ] Play command with YouTube search (`/play`)
-* [ ] Random music discovery command (`/random`)
-* [ ] Playback controls (`/pause`, `/resume`, `/skip`, `/stop`)
-* [ ] Queue display command (`/queue`)
-* [ ] Volume adjustment command (`/volume`)
-* [ ] Interactive player view with button controls (`/player`)
-* [ ] Voice disconnect command (`/leave`)
-* [ ] 24/7 continuous voice connection mode (`/247`)
-* [ ] Automatic audio cache cleanup
+* [x] Voice channel connection and lifecycle management
+* [x] Audio streaming via yt-dlp and FFmpeg
+* [x] Play command with YouTube search (`/play`)
+* [x] Random music discovery command (`/random`)
+* [x] Playback controls (`/pause`, `/resume`, `/skip`, `/stop`)
+* [x] Queue display command (`/queue`)
+* [x] Volume adjustment command (`/volume`)
+* [x] Interactive player view with button controls (`/player`)
+* [x] Voice disconnect command (`/leave`)
+* [x] 24/7 continuous voice connection mode (`/247`)
+* [x] Automatic audio cache cleanup
 
 ---
 

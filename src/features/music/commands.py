@@ -129,6 +129,31 @@ class Music(commands.Cog):
         self.current = {}
         self.player_messages = {}
         self.player_views = {}
+        self._clean_cache()
+
+    def _clean_cache(self):
+        """Remove any leftover audio cache files."""
+        try:
+            if CACHE_DIR.exists():
+                for item in CACHE_DIR.glob("*.opus"):
+                    try:
+                        item.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+        except Exception as e:
+            logging.debug(f"Cache cleanup notice: {e}")
+
+    def cog_unload(self):
+        """Clean cache directory when cog is unloaded."""
+        self._clean_cache()
+
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        """Handle music command errors with friendly feedback."""
+        message = f"❌ An error occurred: `{error}`"
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.followup.send(message, ephemeral=True)
 
     def get_queue(self, guild_id):
         if guild_id not in self.queues:
