@@ -1,8 +1,13 @@
 from datetime import timedelta
+import logging
 
 import discord
 from discord import app_commands
 from discord.ext import commands
+from sqlalchemy import delete, select
+
+from database import database as db
+from database.models import ModerationCase
 
 DEFAULT_REASON = "No reason provided"
 MIN_TIMEOUT_MINUTES = 1
@@ -181,6 +186,24 @@ class Moderation(commands.Cog):
             "reason": reason,
             "time": discord.utils.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         }
+
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    case = ModerationCase(
+                        guild_id=guild_id,
+                        user_id=user.id,
+                        moderator_id=interaction.user.id,
+                        moderator_name=interaction.user.name,
+                        action="warn",
+                        reason=reason,
+                    )
+                    session.add(case)
+                    await session.commit()
+                    record["id"] = case.id
+            except Exception as e:
+                logging.error(f"Failed to persist warning case: {e}")
+
         self.warnings[guild_id][user.id].append(record)
         total_warnings = len(self.warnings[guild_id][user.id])
 
@@ -217,7 +240,38 @@ class Moderation(commands.Cog):
             return
 
         guild_id = interaction.guild.id
-        user_warnings = self.warnings.get(guild_id, {}).get(user.id, [])
+        user_warnings = []
+
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = (
+                        select(ModerationCase)
+                        .where(
+                            ModerationCase.guild_id == guild_id,
+                            ModerationCase.user_id == user.id,
+                            ModerationCase.action == "warn",
+                        )
+                        .order_by(ModerationCase.id.asc())
+                    )
+                    result = await session.execute(stmt)
+                    cases = result.scalars().all()
+                    if cases:
+                        user_warnings = [
+                            {
+                                "id": c.id,
+                                "moderator": c.moderator_name,
+                                "moderator_id": c.moderator_id,
+                                "reason": c.reason,
+                                "time": c.created_at.strftime("%Y-%m-%d %H:%M UTC"),
+                            }
+                            for c in cases
+                        ]
+            except Exception as e:
+                logging.error(f"Failed to query warning cases from database: {e}")
+
+        if not user_warnings:
+            user_warnings = self.warnings.get(guild_id, {}).get(user.id, [])
 
         if not user_warnings:
             await interaction.response.send_message(f"ℹ️ {user.mention} has no recorded warnings.", ephemeral=True)
@@ -248,10 +302,32 @@ class Moderation(commands.Cog):
             return
 
         guild_id = interaction.guild.id
+        cleared_count = 0
+
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = (
+                        delete(ModerationCase)
+                        .where(
+                            ModerationCase.guild_id == guild_id,
+                            ModerationCase.user_id == user.id,
+                            ModerationCase.action == "warn",
+                        )
+                    )
+                    result = await session.execute(stmt)
+                    cleared_count = result.rowcount
+                    await session.commit()
+            except Exception as e:
+                logging.error(f"Failed to clear warnings from database: {e}")
+
+        mem_count = len(self.warnings.get(guild_id, {}).get(user.id, []))
         if guild_id in self.warnings and user.id in self.warnings[guild_id]:
-            count = len(self.warnings[guild_id][user.id])
             del self.warnings[guild_id][user.id]
-            await interaction.response.send_message(f"✅ Cleared **{count}** warning{'s' if count != 1 else ''} for {user.mention}.")
+
+        total_cleared = max(cleared_count, mem_count)
+        if total_cleared > 0:
+            await interaction.response.send_message(f"✅ Cleared **{total_cleared}** warning{'s' if total_cleared != 1 else ''} for {user.mention}.")
         else:
             await interaction.response.send_message(f"ℹ️ {user.mention} has no warnings to clear.", ephemeral=True)
 

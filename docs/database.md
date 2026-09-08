@@ -55,6 +55,38 @@ An index `ix_user_xp_guild_xp` on `(guild_id, xp)` optimizes high-traffic leader
 
 ---
 
+### `GuildConfig` (`guild_config` Table)
+
+Stores server-specific configuration options:
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `guild_id` | `BigInteger` | Primary Key | Discord server ID |
+| `welcome_channel_id` | `BigInteger` | Nullable | Configured welcome channel ID |
+| `modlog_channel_id` | `BigInteger` | Nullable | Configured moderation log channel ID |
+| `updated_at` | `DateTime(timezone=True)` | Default: `now()`, Not Null | Last configuration update timestamp |
+
+---
+
+### `ModerationCase` (`moderation_cases` Table)
+
+Stores an audit log of moderation actions:
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `Integer` | Primary Key, Autoincrement | Unique case identifier |
+| `guild_id` | `BigInteger` | Not Null, Indexed | Discord server ID |
+| `user_id` | `BigInteger` | Not Null, Indexed | Targeted member user ID |
+| `moderator_id` | `BigInteger` | Not Null | Moderator user ID |
+| `moderator_name` | `String(100)` | Not Null | Moderator display username |
+| `action` | `String(32)` | Not Null | Action type (e.g. `warn`, `kick`, `ban`) |
+| `reason` | `Text` | Not Null | Explanation or reason |
+| `created_at` | `DateTime(timezone=True)` | Default: `now()`, Not Null | Timestamp of moderation action |
+
+An index `ix_moderation_cases_guild_user` on `(guild_id, user_id)` optimizes member history lookups.
+
+---
+
 ## 4. Configuration & Environment Variables
 
 The database engine reads its connection details from the `DATABASE_URL` variable in your `.env` file.

@@ -110,16 +110,18 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Rock, Paper, Scissors game against bot (`/rps`)
 * [x] Interactive multiple-choice trivia challenge with buttons (`/trivia`)
 
+### Database & Persistence
+* [x] Active PostgreSQL persistent storage integration
+* [x] SQLAlchemy 2.0 async session integration in feature Cogs
+* [x] Alembic schema migrations workflow for production ([`alembic/versions/`](alembic/versions/))
+* [x] Guild configuration model (`GuildConfig` with custom welcome & mod-log channels)
+* [x] Moderation case log model (`ModerationCase` with infraction history, actions, reasons, and timestamps)
+* [x] User experience model (`UserXP` with per-server isolation and rank tracking)
+* [x] Comprehensive database and graceful degradation test suite ([`tests/test_database.py`](tests/test_database.py))
+
 ---
 
 ## Planned Work
-
-### Database & Persistence
-* [ ] Active PostgreSQL persistent storage integration
-* [ ] SQLAlchemy 2.0 async session integration in feature Cogs
-* [ ] Alembic schema migrations workflow for production
-* [ ] Guild configuration model (custom prefix, custom log channels)
-* [ ] Moderation case log model (case IDs, infraction history, timestamps)
 
 ### Advanced Moderation
 * [ ] Automated spam and invite link filtering

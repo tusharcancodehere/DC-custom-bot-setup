@@ -1,8 +1,13 @@
+import logging
 import sys
 
 import discord
 from discord import app_commands
 from discord.ext import commands
+from sqlalchemy import select
+
+from database import database as db
+from database.models import GuildConfig
 
 ADMIN_COLOR = 0x5865F2
 
@@ -16,6 +21,24 @@ class Admin(commands.Cog):
         self.bot = bot
         # In-memory mapping of guild_id -> channel_id for moderation logs
         self.modlog_channels: dict[int, int] = {}
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Load persisted guild configurations on bot startup."""
+        await self.load_configs()
+
+    async def load_configs(self):
+        """Load administrative configuration from database into memory."""
+        if not db.async_session:
+            return
+        try:
+            async with db.async_session() as session:
+                result = await session.execute(select(GuildConfig))
+                for config in result.scalars().all():
+                    if config.modlog_channel_id:
+                        self.modlog_channels[config.guild_id] = config.modlog_channel_id
+        except Exception as e:
+            logging.error(f"Failed to load modlog configs from database: {e}")
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         """Handle missing permissions gracefully with a friendly message."""
@@ -119,6 +142,21 @@ class Admin(commands.Cog):
             return
 
         self.modlog_channels[interaction.guild.id] = channel.id
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(GuildConfig).where(GuildConfig.guild_id == interaction.guild.id)
+                    result = await session.execute(stmt)
+                    config = result.scalar_one_or_none()
+                    if config:
+                        config.modlog_channel_id = channel.id
+                    else:
+                        config = GuildConfig(guild_id=interaction.guild.id, modlog_channel_id=channel.id)
+                        session.add(config)
+                    await session.commit()
+            except Exception as e:
+                logging.error(f"Failed to persist modlog channel for guild {interaction.guild.id}: {e}")
+
         await interaction.response.send_message(f"✅ Moderation log channel set to {channel.mention}.")
 
     @app_commands.command(name="announce", description="Post a formatted announcement embed to a channel")

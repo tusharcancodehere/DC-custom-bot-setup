@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 import random
 import time
@@ -6,6 +7,10 @@ import time
 import discord
 from discord import app_commands
 from discord.ext import commands
+from sqlalchemy import func, select
+
+from database import database as db
+from database.models import UserXP
 
 EMBED_FILE = Path(__file__).parent / "embed.json"
 PRIMARY_COLOR = 0x5865F2
@@ -69,6 +74,51 @@ class Levels(commands.Cog):
                 "last_xp": 0.0,
             }
         return self.guild_xp[guild_id][user_id]
+
+    async def get_or_fetch_user_data(self, guild_id: int, user_id: int) -> dict:
+        """Fetch user record from memory cache, or load from database if present."""
+        if guild_id in self.guild_xp and user_id in self.guild_xp[guild_id]:
+            return self.guild_xp[guild_id][user_id]
+
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(UserXP).where(UserXP.guild_id == guild_id, UserXP.user_id == user_id)
+                    result = await session.execute(stmt)
+                    record = result.scalar_one_or_none()
+                    if record:
+                        if guild_id not in self.guild_xp:
+                            self.guild_xp[guild_id] = {}
+                        self.guild_xp[guild_id][user_id] = {
+                            "xp": record.xp,
+                            "level": record.level,
+                            "last_xp": record.last_xp.timestamp() if record.last_xp else 0.0,
+                        }
+                        return self.guild_xp[guild_id][user_id]
+            except Exception as e:
+                logging.error(f"Failed to fetch XP for user {user_id} in guild {guild_id}: {e}")
+
+        return self.get_user_data(guild_id, user_id)
+
+    async def _persist_user_xp(self, guild_id: int, user_id: int, xp: int, level: int):
+        """Persist updated XP and level to the database."""
+        if not db.async_session:
+            return
+        try:
+            async with db.async_session() as session:
+                stmt = select(UserXP).where(UserXP.guild_id == guild_id, UserXP.user_id == user_id)
+                result = await session.execute(stmt)
+                record = result.scalar_one_or_none()
+                if record:
+                    record.xp = xp
+                    record.level = level
+                    record.last_xp = discord.utils.utcnow()
+                else:
+                    record = UserXP(guild_id=guild_id, user_id=user_id, xp=xp, level=level)
+                    session.add(record)
+                await session.commit()
+        except Exception as e:
+            logging.error(f"Failed to persist XP for user {user_id}: {e}")
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         """Handle missing permissions gracefully with a friendly message."""
@@ -136,13 +186,14 @@ class Levels(commands.Cog):
         self.cooldowns[key] = now
 
         # Fetch isolated record for this guild
-        user_data = self.get_user_data(message.guild.id, message.author.id)
+        user_data = await self.get_or_fetch_user_data(message.guild.id, message.author.id)
         old_level = user_data["level"]
         xp_gain = random.randint(XP_MIN, XP_MAX)
         user_data["xp"] += xp_gain
         new_level = calculate_level(user_data["xp"])
         user_data["level"] = new_level
         user_data["last_xp"] = time.time()
+        await self._persist_user_xp(message.guild.id, message.author.id, user_data["xp"], user_data["level"])
 
         # Send celebration announcement when reaching a new level
         if new_level > old_level:
@@ -166,13 +217,25 @@ class Levels(commands.Cog):
             return
 
         target = user or interaction.user
-        user_data = self.get_user_data(interaction.guild.id, target.id)
+        user_data = await self.get_or_fetch_user_data(interaction.guild.id, target.id)
         xp = user_data["xp"]
         level = user_data["level"]
 
         # Calculate rank relative only to members in this server
-        guild_users = self.guild_xp.get(interaction.guild.id, {})
-        rank = sum(1 for data in guild_users.values() if data.get("xp", 0) > xp) + 1
+        rank = 1
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(func.count()).select_from(UserXP).where(UserXP.guild_id == interaction.guild.id, UserXP.xp > xp)
+                    res = await session.execute(stmt)
+                    higher_count = res.scalar_one_or_none() or 0
+                    rank = higher_count + 1
+            except Exception:
+                guild_users = self.guild_xp.get(interaction.guild.id, {})
+                rank = sum(1 for data in guild_users.values() if data.get("xp", 0) > xp) + 1
+        else:
+            guild_users = self.guild_xp.get(interaction.guild.id, {})
+            rank = sum(1 for data in guild_users.values() if data.get("xp", 0) > xp) + 1
 
         embed = self.build_level_embed(target, interaction.guild, level, xp, rank)
         await interaction.response.send_message(embed=embed)
@@ -189,15 +252,33 @@ class Levels(commands.Cog):
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
 
-        guild_users = self.guild_xp.get(interaction.guild.id, {})
-        # Filter and sort only members belonging to this guild
-        active_members = [
-            (uid, data["xp"], data["level"])
-            for uid, data in guild_users.items()
-            if data.get("xp", 0) > 0
-        ]
-        active_members.sort(key=lambda x: x[1], reverse=True)
-        top_10 = active_members[:10]
+        top_10 = []
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = (
+                        select(UserXP)
+                        .where(UserXP.guild_id == interaction.guild.id, UserXP.xp > 0)
+                        .order_by(UserXP.xp.desc())
+                        .limit(10)
+                    )
+                    result = await session.execute(stmt)
+                    db_records = result.scalars().all()
+                    if db_records:
+                        top_10 = [(r.user_id, r.xp, r.level) for r in db_records]
+            except Exception as e:
+                logging.error(f"Failed to query leaderboard from database: {e}")
+
+        if not top_10:
+            guild_users = self.guild_xp.get(interaction.guild.id, {})
+            # Filter and sort only members belonging to this guild
+            active_members = [
+                (uid, data["xp"], data["level"])
+                for uid, data in guild_users.items()
+                if data.get("xp", 0) > 0
+            ]
+            active_members.sort(key=lambda x: x[1], reverse=True)
+            top_10 = active_members[:10]
 
         server_name = interaction.guild.name
         server_icon = interaction.guild.icon.url if interaction.guild.icon else None
@@ -240,7 +321,7 @@ class Levels(commands.Cog):
             return
 
         target = user or interaction.user
-        user_data = self.get_user_data(interaction.guild.id, target.id)
+        user_data = await self.get_or_fetch_user_data(interaction.guild.id, target.id)
         xp = user_data["xp"]
         level = user_data["level"]
 
@@ -280,12 +361,13 @@ class Levels(commands.Cog):
             await interaction.response.send_message("Amount must be greater than zero.", ephemeral=True)
             return
 
-        user_data = self.get_user_data(interaction.guild.id, user.id)
+        user_data = await self.get_or_fetch_user_data(interaction.guild.id, user.id)
         user_data["xp"] += amount
         user_data["level"] = calculate_level(user_data["xp"])
         user_data["last_xp"] = time.time()
         new_xp = user_data["xp"]
         new_level = user_data["level"]
+        await self._persist_user_xp(interaction.guild.id, user.id, new_xp, new_level)
 
         embed = discord.Embed(
             title="✨ XP Added",
@@ -308,12 +390,13 @@ class Levels(commands.Cog):
             await interaction.response.send_message("Amount must be greater than zero.", ephemeral=True)
             return
 
-        user_data = self.get_user_data(interaction.guild.id, user.id)
+        user_data = await self.get_or_fetch_user_data(interaction.guild.id, user.id)
         user_data["xp"] = max(0, user_data["xp"] - amount)
         user_data["level"] = calculate_level(user_data["xp"])
         user_data["last_xp"] = time.time()
         new_xp = user_data["xp"]
         new_level = user_data["level"]
+        await self._persist_user_xp(interaction.guild.id, user.id, new_xp, new_level)
 
         embed = discord.Embed(
             title="📉 XP Removed",
@@ -336,12 +419,13 @@ class Levels(commands.Cog):
             await interaction.response.send_message("XP amount cannot be negative.", ephemeral=True)
             return
 
-        user_data = self.get_user_data(interaction.guild.id, user.id)
+        user_data = await self.get_or_fetch_user_data(interaction.guild.id, user.id)
         user_data["xp"] = amount
         user_data["level"] = calculate_level(user_data["xp"])
         user_data["last_xp"] = time.time()
         new_xp = user_data["xp"]
         new_level = user_data["level"]
+        await self._persist_user_xp(interaction.guild.id, user.id, new_xp, new_level)
 
         embed = discord.Embed(
             title="⚙️ XP Set",

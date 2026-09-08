@@ -6,6 +6,10 @@ from pathlib import Path
 import discord
 from discord import app_commands
 from discord.ext import commands
+from sqlalchemy import select
+
+from database import database as db
+from database.models import GuildConfig
 
 EMBED_FILE = Path(__file__).parent / "embed.json"
 PRIMARY_COLOR = 0x5865F2
@@ -17,6 +21,25 @@ class Welcome(commands.Cog):
         self.bot = bot
         # Maps guild_id -> channel_id for custom welcome channels
         self.welcome_channels: dict[int, int] = {}
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Load persisted welcome configurations on bot startup."""
+        await self.load_configs()
+
+    async def load_configs(self):
+        """Load welcome channel configurations from database into memory."""
+        if not db.async_session:
+            return
+        try:
+            async with db.async_session() as session:
+                result = await session.execute(select(GuildConfig))
+                for config in result.scalars().all():
+                    if config.welcome_channel_id:
+                        self.welcome_channels[config.guild_id] = config.welcome_channel_id
+        except Exception as e:
+            logging.error(f"Failed to load welcome configs from database: {e}")
+
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         """Handle missing permissions gracefully with a friendly message."""
@@ -171,6 +194,21 @@ class Welcome(commands.Cog):
             return
 
         self.welcome_channels[interaction.guild.id] = channel.id
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(GuildConfig).where(GuildConfig.guild_id == interaction.guild.id)
+                    result = await session.execute(stmt)
+                    config = result.scalar_one_or_none()
+                    if config:
+                        config.welcome_channel_id = channel.id
+                    else:
+                        config = GuildConfig(guild_id=interaction.guild.id, welcome_channel_id=channel.id)
+                        session.add(config)
+                    await session.commit()
+            except Exception as e:
+                logging.error(f"Failed to persist welcome channel for guild {interaction.guild.id}: {e}")
+
         await interaction.response.send_message(f"✅ Welcome channel has been set to {channel.mention}.")
 
 async def setup(bot):
