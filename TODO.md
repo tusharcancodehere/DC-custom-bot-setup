@@ -16,6 +16,7 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Reusable permission checks and role hierarchy decorators ([`src/core/permissions.py`](src/core/permissions.py))
 * [x] Shared Discord UI components and views ([`src/views/common.py`](src/views/common.py))
 * [x] Graceful shutdown handling (`SIGINT`, `SIGTERM`, `!shutdown`)
+* [x] Multi-container orchestration via Docker Compose ([`docker-compose.yml`](docker-compose.yml))
 
 ---
 
