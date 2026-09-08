@@ -31,6 +31,12 @@ logs/
 # Audio Cache
 src/features/music/cache/
 
+# SQLite Database & Persistent Data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
 # OS & Editor Files
 .DS_Store
 Thumbs.db

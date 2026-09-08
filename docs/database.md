@@ -12,7 +12,8 @@ DC Custom Bot uses an asynchronous database stack built around PostgreSQL and SQ
 
 | Technology | Purpose | Documentation |
 | :--- | :--- | :--- |
-| **PostgreSQL** (`>= 15`) | Relational database engine for persistent data storage. | [PostgreSQL Docs](https://www.postgresql.org/docs/) |
+| **PostgreSQL** (`>= 15`) | Relational database engine for production persistent data storage. | [PostgreSQL Docs](https://www.postgresql.org/docs/) |
+| **SQLite** / **aiosqlite** (`>= 0.22.1`) | Zero-configuration asynchronous local database fallback. | [aiosqlite Docs](https://aiosqlite.omnilib.dev/) |
 | **SQLAlchemy** (`>= 2.0.52`) | Modern Python ORM and SQL toolkit using async engines and declarative models. | [SQLAlchemy Docs](https://docs.sqlalchemy.org/en/20/) |
 | **asyncpg** (`>= 0.31.0`) | High-performance asynchronous PostgreSQL driver for Python and asyncio. | [asyncpg Docs](https://magicstack.github.io/asyncpg/) |
 | **Alembic** (`>= 1.19.1`) | Database schema migration tool for tracking and applying database revisions. | [Alembic Docs](https://alembic.sqlalchemy.org/en/latest/) |
@@ -21,17 +22,12 @@ DC Custom Bot uses an asynchronous database stack built around PostgreSQL and SQ
 
 ## 2. Architecture & Graceful Degradation
 
-### Persistent Leveling
-The database persistently tracks member experience (`xp`), current level (`level`), and timestamp cooldowns (`last_xp`) per server guild. This ensures member ranks and leaderboards survive bot restarts.
+### Persistence & Automatic Fallback
+The database persistently tracks member experience (`xp`), current level (`level`), timestamps (`last_xp`), server configurations (`guild_config`), and moderation audit logs (`moderation_cases`).
 
-### Graceful Degradation (Database is Optional)
-To make local development, quick testing, and hosting setup effortless:
-* **The bot starts and runs even without a database.**
-* If `DATABASE_URL` is omitted from `.env`, or if the PostgreSQL server is unreachable, [`init_db()`](../src/database/database.py) logs a friendly notice:
-  `Database: unavailable (DATABASE_URL not configured)`
-* All core features continue to work: moderation (`/kick`, `/ban`, `/purge`), music playback (`/play`, `/player`), welcome embeds (`/welcome`), and AI assistant (`/ask`).
-* Level commands (`/level`, `/rank`, `/leaderboard`, etc.) safely report a friendly message to the user:
-  `"Database is not configured. Persistent XP is currently unavailable."`
+* **PostgreSQL (Preferred for Production)**: When `DATABASE_URL` is set, the bot connects to PostgreSQL via `asyncpg`.
+* **Automatic SQLite Fallback**: When `DATABASE_URL` is omitted or empty, the bot automatically initializes a local SQLite database at `sqlite+aiosqlite:///data/bot.db`. No manual database configuration is required.
+* **Graceful Degradation (In-Memory)**: If both PostgreSQL and SQLite fail to initialize, the bot starts and runs in-memory. All moderation, music, AI, and ticket commands remain functional, while XP and configuration changes remain cached in-memory during runtime.
 
 ---
 
@@ -102,6 +98,15 @@ DATABASE_URL="postgresql+asyncpg://<username>:<password>@<host>:<port>/<database
 
 ### Example Configurations
 
+* **Automatic SQLite (Default when empty)**:
+  ```env
+  DATABASE_URL=""
+  # Uses sqlite+aiosqlite:///data/bot.db automatically
+  ```
+* **Custom SQLite Path**:
+  ```env
+  DATABASE_URL="sqlite+aiosqlite:///data/custom.db"
+  ```
 * **Local PostgreSQL**:
   ```env
   DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/dc_custom_bot"

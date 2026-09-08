@@ -99,11 +99,13 @@ Interactive server entertainment and casual games:
 * `/trivia` — Test your knowledge with interactive multiple-choice trivia questions featuring clickable buttons.
 
 ### 🗄️ Database & Persistence
-PostgreSQL storage with SQLAlchemy 2.0 async sessions and Alembic schema migrations:
-* **Persistent XP & Leveling**: User XP and levels are stored in PostgreSQL (`user_xp` table) and survive bot restarts.
-* **Server Configurations**: Welcome channel and moderation log channel settings are persisted in PostgreSQL (`guild_config` table).
-* **Moderation Audit Log**: Member warnings and disciplinary cases are tracked in PostgreSQL (`moderation_cases` table).
-* **Graceful Degradation**: If `DATABASE_URL` is omitted or PostgreSQL is offline, all features continue functioning seamlessly using in-memory caches.
+Relational storage with SQLAlchemy 2.0 async sessions and Alembic schema migrations:
+* **PostgreSQL (Production)**: Recommended for production and multi-container deployments via `docker compose`.
+* **Automatic SQLite Fallback**: If `DATABASE_URL` is empty or unset, the bot automatically initializes and uses a local SQLite database (`sqlite+aiosqlite:///data/bot.db`).
+* **Persistent XP & Leveling**: User XP and levels are stored in the database (`user_xp` table) and survive bot restarts.
+* **Server Configurations**: Welcome channel, mod log channel, and opt-in level-up announcement settings are persisted in the database (`guild_config` table).
+* **Moderation Audit Log**: Member warnings and disciplinary cases are tracked in the database (`moderation_cases` table).
+* **Graceful Degradation**: If both PostgreSQL and SQLite fail to initialize, all features continue functioning seamlessly using in-memory fallbacks.
 * See [docs/database.md](docs/database.md) for architecture, setup options, and schema migrations.
 
 ### ⚙️ General & Utility
@@ -248,7 +250,7 @@ cp .env.example .env
 | `APPLICATION_ID` | **Yes** | Application / Client ID from the [Discord Developer Portal](https://discord.com/developers/applications). |
 | `OPENAI_API_KEY` | Optional | OpenAI API key for `/ask` (`gpt-5-mini`). |
 | `GEMINI_API_KEY` | Optional | Google Gemini API key for `/ask` fallback (`gemini-2.5-flash`). |
-| `DATABASE_URL` | Optional | PostgreSQL connection string (`postgresql+asyncpg://...`) for planned persistence. |
+| `DATABASE_URL` | Optional | Database connection string. Recommended for PostgreSQL in production (`postgresql+asyncpg://...`). If left empty, SQLite is used automatically (`sqlite+aiosqlite:///data/bot.db`). |
 
 > [!WARNING]
 > Never commit your `.env` file or expose your bot token publicly.

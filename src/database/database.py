@@ -1,46 +1,46 @@
 import logging
 import os
+from pathlib import Path
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from core.config import load_environment
 
 load_environment()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.strip().strip("'\"")
-    if not DATABASE_URL:
-        DATABASE_URL = None
+DEFAULT_SQLITE_URL = "sqlite+aiosqlite:///data/bot.db"
 
 class Base(DeclarativeBase):
     pass
 
 engine = None
 async_session = None
+DATABASE_URL = None
 
-from sqlalchemy.pool import NullPool
-
-if DATABASE_URL:
-    try:
-        engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
-        async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    except Exception as error:
-        logging.warning("Database engine initialization failed: %s", error, exc_info=True)
-        DATABASE_URL = None
+def _ensure_sqlite_directory(url: str):
+    """Ensure the target directory exists when using a SQLite database file."""
+    if url.startswith("sqlite") and ":///" in url:
+        db_path = url.split(":///", 1)[1]
+        if db_path and db_path != ":memory:":
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
 def is_db_connected() -> bool:
     """Return True if the database engine and sessionmaker are configured and active."""
     return engine is not None and async_session is not None
 
 def set_database_url(url: str | None, use_null_pool: bool = False):
-    """Set or update the database URL and initialize engine and sessionmaker."""
+    """Set or update the database URL and initialize engine and sessionmaker.
+    
+    Pass None to explicitly disable the database and run in-memory.
+    """
     global DATABASE_URL, engine, async_session
     DATABASE_URL = url.strip().strip("'\"") if url else None
     if DATABASE_URL:
         try:
+            _ensure_sqlite_directory(DATABASE_URL)
             kwargs = {"echo": False, "pool_pre_ping": True}
             if use_null_pool:
                 kwargs["poolclass"] = NullPool
@@ -55,6 +55,17 @@ def set_database_url(url: str | None, use_null_pool: bool = False):
         engine = None
         async_session = None
 
+def configure_database(url: str | None = None, use_null_pool: bool = False):
+    """Configure the active database with PostgreSQL when provided or SQLite fallback when unset."""
+    raw = url if url is not None else os.getenv("DATABASE_URL")
+    if raw:
+        raw = raw.strip().strip("'\"")
+    # If no URL is configured, automatically fall back to SQLite
+    effective_url = raw if raw else DEFAULT_SQLITE_URL
+    set_database_url(effective_url, use_null_pool=use_null_pool)
+
+# Configure database on import: uses PostgreSQL if configured, otherwise falls back to SQLite
+configure_database()
 
 async def init_db() -> bool:
     global engine, async_session
@@ -68,17 +79,19 @@ async def init_db() -> bool:
         print("Database: unavailable (database engine could not be initialized)")
         return False
 
+    db_type = "SQLite" if DATABASE_URL.startswith("sqlite") else "PostgreSQL"
     try:
         import database.models
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
             await conn.run_sync(Base.metadata.create_all)
-        logging.info("Database: connected")
-        print("Database: connected")
+        logging.info(f"Database: connected ({db_type})")
+        print(f"Database: connected ({db_type})")
         return True
     except Exception as error:
-        logging.error(f"Database: unavailable (PostgreSQL connection failed: {error})")
-        print(f"Database: unavailable (PostgreSQL connection failed: {error})")
+        logging.error(f"Database: unavailable ({db_type} connection failed: {error})")
+        print(f"Database: unavailable ({db_type} connection failed: {error})")
+        engine = None
         async_session = None
         return False
 
