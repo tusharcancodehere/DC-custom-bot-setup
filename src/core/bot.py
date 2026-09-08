@@ -49,13 +49,22 @@ class CustomBot(commands.Bot):
         super().__init__(command_prefix=COMMAND_PREFIX, intents=intents, application_id=int(os.getenv("APPLICATION_ID")))
         self.token = os.getenv("DISCORD_TOKEN")
         self._synced = False
+        self._register_prefix_commands()
 
-    @commands.command()
-    @commands.is_owner()
-    async def shutdown(self, ctx):
-        logging.info(f"Shutdown requested by {ctx.author}")
-        await ctx.send("Shutting down...")
-        await self.close()
+    def _register_prefix_commands(self):
+        @self.command(name="shutdown")
+        @commands.is_owner()
+        async def shutdown(ctx: commands.Context):
+            logging.info(f"Shutdown requested by {ctx.author}")
+            await ctx.send("Shutting down...")
+            await self.close()
+
+        @shutdown.error
+        async def shutdown_error(ctx: commands.Context, error: commands.CommandError):
+            if isinstance(error, commands.NotOwner):
+                await ctx.send("❌ Only the bot owner can use this command.")
+            else:
+                logging.error(f"Error in shutdown command: {error}", exc_info=error)
 
     async def setup_hook(self):
         await init_db()

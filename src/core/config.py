@@ -15,6 +15,16 @@ def load_environment():
     load_dotenv(".env.local")
     load_dotenv(".env")
 
+    # Sanitize environment variables (e.g. when passed with literal quotes via Docker --env-file)
+    for key, value in list(os.environ.items()):
+        if value:
+            stripped = value.strip()
+            if len(stripped) >= 2 and (
+                (stripped.startswith('"') and stripped.endswith('"')) or
+                (stripped.startswith("'") and stripped.endswith("'"))
+            ):
+                os.environ[key] = stripped[1:-1]
+
 def validate_startup_config():
     load_environment()
     print("Starting DC-custom-bot-setup...")

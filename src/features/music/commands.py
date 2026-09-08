@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from pathlib import Path
 import random
@@ -38,37 +39,50 @@ class MusicPlayerView(discord.ui.View):
         guild = self.music.bot.get_guild(self.guild_id)
         return guild.voice_client if guild else None
 
+    async def _respond(self, interaction: discord.Interaction, message: str):
+        """Send button response safely, handling expired or pre-acknowledged tokens."""
+        if not interaction.response.is_done():
+            try:
+                await interaction.response.send_message(message, ephemeral=True)
+            except discord.NotFound:
+                pass
+        else:
+            try:
+                await interaction.followup.send(message, ephemeral=True)
+            except discord.NotFound:
+                pass
+
     @discord.ui.button(emoji="⏯️", style=discord.ButtonStyle.secondary)
     async def pause_resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         voice = self.get_voice()
         if not voice:
-            await interaction.response.send_message("I'm not in a voice channel.", ephemeral=True)
+            await self._respond(interaction, "I'm not in a voice channel.")
             return
 
         if voice.is_paused():
             voice.resume()
-            await interaction.response.send_message("▶️ Resumed.", ephemeral=True)
+            await self._respond(interaction, "▶️ Resumed.")
         elif voice.is_playing():
             voice.pause()
-            await interaction.response.send_message("⏸️ Paused.", ephemeral=True)
+            await self._respond(interaction, "⏸️ Paused.")
         else:
-            await interaction.response.send_message("Nothing is playing.", ephemeral=True)
+            await self._respond(interaction, "Nothing is playing.")
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.primary)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         voice = self.get_voice()
         if not voice or not voice.is_playing():
-            await interaction.response.send_message("Nothing is playing.", ephemeral=True)
+            await self._respond(interaction, "Nothing is playing.")
             return
 
         voice.stop()
-        await interaction.response.send_message("⏭️ Skipped.", ephemeral=True)
+        await self._respond(interaction, "⏭️ Skipped.")
 
     @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger)
     async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
         voice = self.get_voice()
         if not voice:
-            await interaction.response.send_message("I'm not in a voice channel.", ephemeral=True)
+            await self._respond(interaction, "I'm not in a voice channel.")
             return
 
         queue = self.music.get_queue(self.guild_id)
@@ -76,7 +90,7 @@ class MusicPlayerView(discord.ui.View):
         if voice.is_playing() or voice.is_paused():
             voice.stop()
 
-        await interaction.response.send_message("⏹️ Stopped and cleared the queue.", ephemeral=True)
+        await self._respond(interaction, "⏹️ Stopped and cleared the queue.")
         await self.music.update_player(self.guild_id)
 
     @discord.ui.button(emoji="🔁", label="24/7", style=discord.ButtonStyle.success)
@@ -84,24 +98,26 @@ class MusicPlayerView(discord.ui.View):
         enabled = not self.music.always_on.get(self.guild_id, False)
         self.music.always_on[self.guild_id] = enabled
         button.style = discord.ButtonStyle.success if enabled else discord.ButtonStyle.secondary
-        await interaction.response.send_message(f"🔁 24/7 mode **{'enabled' if enabled else 'disabled'}**.", ephemeral=True)
+        await self._respond(interaction, f"🔁 24/7 mode **{'enabled' if enabled else 'disabled'}**.")
         await self.music.update_player(self.guild_id, self)
 
     @discord.ui.button(emoji="❌", style=discord.ButtonStyle.secondary)
     async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
         voice = self.get_voice()
         if not voice:
-            await interaction.response.send_message("I'm not in a voice channel.", ephemeral=True)
+            await self._respond(interaction, "I'm not in a voice channel.")
             return
 
         queue = self.music.get_queue(self.guild_id)
         queue.clear()
+        self.music.current.pop(self.guild_id, None)
         self.music.always_on[self.guild_id] = False
         if voice.is_playing() or voice.is_paused():
             voice.stop()
 
+        # Send response before awaiting disconnect to prevent 10062 Unknown interaction
+        await self._respond(interaction, "👋 Left the voice channel.")
         await voice.disconnect()
-        await interaction.response.send_message("👋 Left the voice channel.", ephemeral=True)
         await self.music.update_player(self.guild_id)
 
 class Music(commands.Cog):
@@ -175,6 +191,21 @@ class Music(commands.Cog):
         if hours:
             return f"{hours}:{minutes:02d}:{seconds:02d}"
         return f"{minutes}:{seconds:02d}"
+
+    def format_extraction_error(self, error: Exception) -> str:
+        """Translate yt-dlp technical errors into clean, user-friendly messages."""
+        msg = str(error).lower()
+        if "confirm your age" in msg or "sign in to confirm" in msg or ("age" in msg and "restricted" in msg):
+            return "⚠️ This video is age-restricted and cannot be played without authentication."
+        if "private video" in msg:
+            return "⚠️ This video is private and cannot be played."
+        if "unavailable" in msg or "not available" in msg:
+            return "⚠️ This video is unavailable or region-restricted."
+        if "copyright" in msg:
+            return "⚠️ This audio is unavailable due to copyright restrictions."
+        if "no video found" in msg or "no results" in msg:
+            return "❌ No matching video found for that query."
+        return "❌ Could not stream the requested audio track. Please try a different song or URL."
 
     def build_embed(self, guild_id):
         song = self.current.get(guild_id)
@@ -339,8 +370,8 @@ class Music(commands.Cog):
         try:
             song = await self.download_song(query)
         except Exception as error:
-            print(f"Download error: {error}")
-            await interaction.followup.send(f"Couldn't download the song: `{error}`")
+            logging.warning(f"Music download error for '{query}': {error}")
+            await interaction.followup.send(self.format_extraction_error(error))
             return
 
         queue = self.get_queue(interaction.guild.id)
@@ -379,8 +410,8 @@ class Music(commands.Cog):
         try:
             song = await self.download_song(query)
         except Exception as error:
-            print(f"Download error: {error}")
-            await interaction.followup.send(f"Couldn't retrieve a random track: `{error}`")
+            logging.warning(f"Random music download error: {error}")
+            await interaction.followup.send(self.format_extraction_error(error))
             return
 
         queue = self.get_queue(interaction.guild.id)
