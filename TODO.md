@@ -103,6 +103,13 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] In-channel ticket controls (`TicketControlView` with Close & Delete)
 * [x] Staff slash commands (`/ticket_close`, `/ticket_delete`)
 
+### Mini-Games
+* [x] Coin flip command with prediction option (`/coinflip`)
+* [x] Dice roll command supporting multi-dice and dice notation (`/roll`)
+* [x] Magic 8-Ball oracle command (`/8ball`)
+* [x] Rock, Paper, Scissors game against bot (`/rps`)
+* [x] Interactive multiple-choice trivia challenge with buttons (`/trivia`)
+
 ---
 
 ## Planned Work
@@ -120,13 +127,6 @@ This document is the source of truth for project progress, tracking implemented 
 ### Advanced Welcome
 * [ ] Auto-role assignment for new members
 * [ ] Dynamic banner image generation
-
-### Mini-Games
-* [ ] Coin flip command
-* [ ] Dice roll command
-* [ ] Rock Paper Scissors command
-* [ ] 8-Ball command
-* [ ] Trivia command
 
 ---
 

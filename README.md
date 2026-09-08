@@ -87,6 +87,14 @@ Interactive private ticket channel management for member assistance:
 * `/ticket_delete` — Permanently delete a closed ticket channel (`Manage Channels` permission required).
 * **Automated Isolation & Overwrites**: Configures private channel permissions hiding tickets from `@everyone` while granting access only to the ticket opener and server staff. Prevents duplicate open tickets per user.
 
+### 🎲 Mini-Games
+Interactive server entertainment and casual games:
+* `/coinflip` — Flip a coin with an optional guess (`heads` or `tails`) to test your prediction skills.
+* `/roll` — Roll dice supporting custom sides (e.g. `20`) or standard tabletop dice notation (e.g. `2d6`, `3d20`).
+* `/8ball` — Consult the classic Magic 8-Ball oracle for predictions and guidance.
+* `/rps` — Play Rock, Paper, Scissors directly against the bot with win, loss, and tie detection.
+* `/trivia` — Test your knowledge with interactive multiple-choice trivia questions featuring clickable buttons.
+
 ### ⚙️ General & Utility
 Core maintenance and diagnostic commands:
 * `/ping` — Check bot connectivity, WebSocket response latency, and operational status.
@@ -100,7 +108,6 @@ Core maintenance and diagnostic commands:
 The following features are planned on our roadmap:
 
 * **🗄️ Database Persistence (Planned)**: PostgreSQL and SQLAlchemy 2.0 integration with Alembic schema migrations for persistent server configuration and long-term XP storage across bot restarts.
-* **🎲 Mini-Games (Planned)**: Interactive server games such as coin flip, dice roll, rock-paper-scissors, and trivia.
 
 ---
 
@@ -134,6 +141,7 @@ DC-custom-bot-setup/
 │   ├── features/            # Modular bot features
 │   │   ├── admin/           # Administrative tools (/serverinfo, /botinfo, /announce)
 │   │   ├── ai/              # AI assistant (/ask, /clear)
+│   │   ├── games/           # Mini-games (/coinflip, /roll, /8ball, /rps, /trivia)
 │   │   ├── general/         # General utility commands (/ping)
 │   │   ├── levels/          # Level system (/level, /rank, /leaderboard)
 │   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, /purge, /warn)

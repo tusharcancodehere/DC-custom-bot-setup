@@ -22,6 +22,7 @@ EXTENSIONS = [
     "features.moderation.commands",
     "features.music.commands",
     "features.tickets.commands",
+    "features.games.commands",
 ]
 
 # Load Opus for voice support if available
