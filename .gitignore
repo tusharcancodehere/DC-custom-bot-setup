@@ -14,6 +14,8 @@ __pycache__/
 .env.*.local
 .env.*
 !.env.example
+*.cookies
+cookies.txt
 
 # Testing & Tooling Caches
 .pytest_cache/

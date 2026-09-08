@@ -1,21 +1,33 @@
 import logging
 import os
 
-from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-load_dotenv(".env.local")
-load_dotenv(".env")
+from core.config import load_environment
+
+load_environment()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip().strip("'\"")
+    if not DATABASE_URL:
+        DATABASE_URL = None
 
 class Base(DeclarativeBase):
     pass
 
-engine = create_async_engine(DATABASE_URL, echo=False) if DATABASE_URL else None
-async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False) if engine else None
+engine = None
+async_session = None
+
+if DATABASE_URL:
+    try:
+        engine = create_async_engine(DATABASE_URL, echo=False)
+        async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    except Exception as error:
+        logging.warning(f"Database engine initialization failed: {error}")
+
 
 async def init_db() -> bool:
     global engine, async_session
