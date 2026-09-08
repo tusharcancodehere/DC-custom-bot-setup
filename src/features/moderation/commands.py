@@ -54,21 +54,48 @@ class Moderation(commands.Cog):
 
     def _check_hierarchy(self, interaction: discord.Interaction, target: discord.Member) -> str | None:
         """Verify role hierarchy so moderators cannot target server owner, bot, or equals/superiors."""
+        if not interaction.guild:
+            return "This command can only be used in a server."
+
+        # 1. Bot cannot moderate itself
+        if interaction.guild.me and target == interaction.guild.me:
+            return "I cannot moderate myself."
+
+        # 2. User cannot moderate themselves (server owner cannot ban themselves)
+        if target == interaction.user:
+            return "You cannot moderate yourself."
+
+        # 3. No one can moderate the server owner
         if target == interaction.guild.owner:
             return "You cannot moderate the server owner."
-        if target == interaction.guild.me:
-            return "I cannot moderate myself."
-        if target.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
-            return "You cannot moderate someone with an equal or higher role."
-        if target.top_role >= interaction.guild.me.top_role:
+
+        # 4. Invoking user hierarchy check (server owner bypasses invoker role-hierarchy)
+        if interaction.user != interaction.guild.owner:
+            if target.top_role >= interaction.user.top_role:
+                return "You cannot moderate someone with an equal or higher role."
+
+        # 5. Bot hierarchy check (bot cannot moderate someone with equal or higher role)
+        if interaction.guild.me and target.top_role >= interaction.guild.me.top_role:
             return "I cannot moderate this member because their role is higher than mine."
+
         return None
 
     @app_commands.command(name="kick", description="Kick a member from the server")
     @app_commands.checks.has_permissions(kick_members=True)
+    @app_commands.checks.bot_has_permissions(kick_members=True)
     async def kick_command(self, interaction: discord.Interaction, user: discord.Member, reason: str = DEFAULT_REASON):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "kick_members", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
+            return
+
+        bot_perms = getattr(interaction.guild.me, "guild_permissions", None) if interaction.guild and interaction.guild.me else None
+        if bot_perms is not None and not getattr(bot_perms, "kick_members", True):
+            await interaction.response.send_message("❌ I do not have the required permissions to perform this action.", ephemeral=True)
             return
 
         hierarchy_error = self._check_hierarchy(interaction, user)
@@ -89,9 +116,20 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="ban", description="Ban a member from the server")
     @app_commands.checks.has_permissions(ban_members=True)
+    @app_commands.checks.bot_has_permissions(ban_members=True)
     async def ban_command(self, interaction: discord.Interaction, user: discord.Member, reason: str = DEFAULT_REASON):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "ban_members", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
+            return
+
+        bot_perms = getattr(interaction.guild.me, "guild_permissions", None) if interaction.guild and interaction.guild.me else None
+        if bot_perms is not None and not getattr(bot_perms, "ban_members", True):
+            await interaction.response.send_message("❌ I do not have the required permissions to perform this action.", ephemeral=True)
             return
 
         hierarchy_error = self._check_hierarchy(interaction, user)
@@ -133,9 +171,20 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="timeout", description="Temporarily mute/timeout a member")
     @app_commands.checks.has_permissions(moderate_members=True)
+    @app_commands.checks.bot_has_permissions(moderate_members=True)
     async def timeout_command(self, interaction: discord.Interaction, user: discord.Member, minutes: int, reason: str = DEFAULT_REASON):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "moderate_members", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
+            return
+
+        bot_perms = getattr(interaction.guild.me, "guild_permissions", None) if interaction.guild and interaction.guild.me else None
+        if bot_perms is not None and not getattr(bot_perms, "moderate_members", True):
+            await interaction.response.send_message("❌ I do not have the required permissions to perform this action.", ephemeral=True)
             return
 
         if minutes < MIN_TIMEOUT_MINUTES:
@@ -165,6 +214,11 @@ class Moderation(commands.Cog):
     async def warn_command(self, interaction: discord.Interaction, user: discord.Member, reason: str = DEFAULT_REASON):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "moderate_members", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
             return
 
         hierarchy_error = self._check_hierarchy(interaction, user)
