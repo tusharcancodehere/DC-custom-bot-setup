@@ -221,10 +221,21 @@ class Moderation(commands.Cog):
             await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
             return
 
-        hierarchy_error = self._check_hierarchy(interaction, user)
-        if hierarchy_error:
-            await interaction.response.send_message(f"❌ {hierarchy_error}", ephemeral=True)
+        # Target validation: safe handling for invalid targets
+        if not user or not hasattr(user, "id"):
+            await interaction.response.send_message("❌ Invalid member specified.", ephemeral=True)
             return
+
+        if interaction.guild.me and user == interaction.guild.me:
+            await interaction.response.send_message("❌ I cannot warn myself.", ephemeral=True)
+            return
+
+        if user == interaction.user:
+            await interaction.response.send_message("❌ You cannot warn yourself.", ephemeral=True)
+            return
+
+        # Note: /warn is a non-destructive logging action and intentionally allows
+        # warning any member (including moderators, admins, higher roles, and owner).
 
         guild_id = interaction.guild.id
         if guild_id not in self.warnings:
@@ -261,7 +272,7 @@ class Moderation(commands.Cog):
         self.warnings[guild_id][user.id].append(record)
         total_warnings = len(self.warnings[guild_id][user.id])
 
-        # Attempt sending DM to warned member
+        # Attempt sending DM to warned member safely
         dm_embed = discord.Embed(
             title=f"⚠️ Warning in {interaction.guild.name}",
             description=f"You received a warning from staff.\n\n**Reason:** {reason}\n**Total Warnings:** {total_warnings}",
@@ -271,13 +282,15 @@ class Moderation(commands.Cog):
         if interaction.guild.icon:
             dm_embed.set_thumbnail(url=interaction.guild.icon.url)
 
-        try:
-            await user.send(embed=dm_embed)
-        except discord.Forbidden:
-            pass
+        if hasattr(user, "send"):
+            try:
+                await user.send(embed=dm_embed)
+            except Exception:
+                pass
 
         embed = discord.Embed(title="⚠️ Warning Issued", color=WARNING_COLOR)
-        embed.set_thumbnail(url=user.display_avatar.url)
+        if hasattr(user, "display_avatar") and getattr(user.display_avatar, "url", None):
+            embed.set_thumbnail(url=user.display_avatar.url)
         embed.add_field(name="👤 Member", value=f"{user.mention} (`{user.name}`)", inline=True)
         embed.add_field(name="🛡️ Moderator", value=interaction.user.mention, inline=True)
         embed.add_field(name="🔢 Total Warnings", value=f"**{total_warnings}**", inline=True)
@@ -291,6 +304,15 @@ class Moderation(commands.Cog):
     async def warnings_command(self, interaction: discord.Interaction, user: discord.Member):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "moderate_members", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
+            return
+
+        if not user or not hasattr(user, "id"):
+            await interaction.response.send_message("❌ Invalid member specified.", ephemeral=True)
             return
 
         guild_id = interaction.guild.id
@@ -336,7 +358,8 @@ class Moderation(commands.Cog):
             description=f"Total warnings: **{len(user_warnings)}**",
             color=WARNING_COLOR,
         )
-        embed.set_thumbnail(url=user.display_avatar.url)
+        if hasattr(user, "display_avatar") and getattr(user.display_avatar, "url", None):
+            embed.set_thumbnail(url=user.display_avatar.url)
 
         for item in user_warnings[-10:]:
             embed.add_field(
@@ -353,6 +376,15 @@ class Moderation(commands.Cog):
     async def clear_warnings_command(self, interaction: discord.Interaction, user: discord.Member):
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "moderate_members", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this moderation command.", ephemeral=True)
+            return
+
+        if not user or not hasattr(user, "id"):
+            await interaction.response.send_message("❌ Invalid member specified.", ephemeral=True)
             return
 
         guild_id = interaction.guild.id

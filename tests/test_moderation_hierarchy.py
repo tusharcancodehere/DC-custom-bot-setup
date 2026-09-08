@@ -77,6 +77,17 @@ class TestModerationHierarchyAndPermissions(unittest.IsolatedAsyncioTestCase):
         self.lower_member.display_avatar = MagicMock(url="https://example.com/avatar.png")
         self.lower_member.ban = AsyncMock()
         self.lower_member.kick = AsyncMock()
+        self.lower_member.timeout = AsyncMock()
+        self.lower_member.send = AsyncMock()
+
+        # Other moderator member (Role pos 40)
+        self.other_moderator = MagicMock(spec=discord.Member)
+        self.other_moderator.id = 3500
+        self.other_moderator.name = "OtherModerator"
+        self.other_moderator.mention = "<@3500>"
+        self.other_moderator.top_role = FakeRole(40, "ModRole")
+        self.other_moderator.display_avatar = MagicMock(url="https://example.com/othermod.png")
+        self.other_moderator.send = AsyncMock()
 
         # Equal or higher role member (Role pos 45 - higher than mod, lower than bot)
         self.high_member = MagicMock(spec=discord.Member)
@@ -84,7 +95,11 @@ class TestModerationHierarchyAndPermissions(unittest.IsolatedAsyncioTestCase):
         self.high_member.name = "AdminMember"
         self.high_member.mention = "<@5000>"
         self.high_member.top_role = FakeRole(45, "AdminRole")
+        self.high_member.display_avatar = MagicMock(url="https://example.com/admin.png")
         self.high_member.ban = AsyncMock()
+        self.high_member.kick = AsyncMock()
+        self.high_member.timeout = AsyncMock()
+        self.high_member.send = AsyncMock()
 
         # Superior member (Role pos 60 - higher than bot)
         self.superior_member = MagicMock(spec=discord.Member)
@@ -92,15 +107,25 @@ class TestModerationHierarchyAndPermissions(unittest.IsolatedAsyncioTestCase):
         self.superior_member.name = "SuperiorMember"
         self.superior_member.mention = "<@6000>"
         self.superior_member.top_role = FakeRole(60, "SuperiorRole")
+        self.superior_member.display_avatar = MagicMock(url="https://example.com/superior.png")
         self.superior_member.ban = AsyncMock()
+        self.superior_member.kick = AsyncMock()
+        self.superior_member.timeout = AsyncMock()
+        self.superior_member.send = AsyncMock()
 
-        # Regular user without Ban Members permission (Role pos 10)
+        # Server owner extra mocks
+        self.owner.display_avatar = MagicMock(url="https://example.com/owner.png")
+        self.owner.send = AsyncMock()
+
+        # Regular user without permissions (Role pos 10)
         self.unprivileged_user = MagicMock(spec=discord.Member)
         self.unprivileged_user.id = 7000
         self.unprivileged_user.name = "UnprivilegedUser"
         self.unprivileged_user.top_role = FakeRole(10, "MemberRole")
         unpriv_perms = MagicMock()
         unpriv_perms.ban_members = False
+        unpriv_perms.kick_members = False
+        unpriv_perms.moderate_members = False
         self.unprivileged_user.guild_permissions = unpriv_perms
 
     def _create_interaction(self, user):
@@ -191,6 +216,177 @@ class TestModerationHierarchyAndPermissions(unittest.IsolatedAsyncioTestCase):
         interaction.response.send_message.assert_called_once()
         msg = interaction.response.send_message.call_args[0][0]
         self.assertIn("I do not have the required permissions", msg)
+
+    # --- /warn Non-Destructive Tests ---
+
+    async def test_warn_works_on_normal_member(self):
+        """Test /warn successfully warns a normal/lower-role member."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.lower_member, reason="Chat spam")
+
+        interaction.response.send_message.assert_called_once()
+        embed = interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(embed)
+        self.assertIn("Warning Issued", embed.title)
+        self.assertEqual(len(self.mod_cog.warnings[self.guild.id][self.lower_member.id]), 1)
+        self.lower_member.send.assert_called_once()
+
+    async def test_warn_works_on_moderator(self):
+        """Test /warn works on other moderators."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.other_moderator, reason="Mod conduct")
+
+        interaction.response.send_message.assert_called_once()
+        embed = interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(embed)
+        self.assertIn("Warning Issued", embed.title)
+        self.assertEqual(len(self.mod_cog.warnings[self.guild.id][self.other_moderator.id]), 1)
+        self.other_moderator.send.assert_called_once()
+
+    async def test_warn_works_on_admin(self):
+        """Test /warn works on administrators with higher roles."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.high_member, reason="Admin policy notice")
+
+        interaction.response.send_message.assert_called_once()
+        embed = interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(embed)
+        self.assertIn("Warning Issued", embed.title)
+        self.assertEqual(len(self.mod_cog.warnings[self.guild.id][self.high_member.id]), 1)
+        self.high_member.send.assert_called_once()
+
+    async def test_warn_works_on_higher_role_member(self):
+        """Test /warn works on superior members whose role is higher than both moderator and bot."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.superior_member, reason="Superior role notice")
+
+        interaction.response.send_message.assert_called_once()
+        embed = interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(embed)
+        self.assertIn("Warning Issued", embed.title)
+        self.assertEqual(len(self.mod_cog.warnings[self.guild.id][self.superior_member.id]), 1)
+        self.superior_member.send.assert_called_once()
+
+    async def test_warn_works_on_server_owner(self):
+        """Test /warn works on the server owner without being blocked by role hierarchy."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.owner, reason="Owner conduct reminder")
+
+        interaction.response.send_message.assert_called_once()
+        embed = interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(embed)
+        self.assertIn("Warning Issued", embed.title)
+        self.assertEqual(len(self.mod_cog.warnings[self.guild.id][self.owner.id]), 1)
+        self.owner.send.assert_called_once()
+
+    async def test_warn_rejects_self_warning(self):
+        """Test that members cannot warn themselves."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.moderator, reason="Self warning")
+
+        interaction.response.send_message.assert_called_once()
+        msg = interaction.response.send_message.call_args[0][0]
+        self.assertIn("cannot warn yourself", msg)
+
+    async def test_warn_rejects_warning_bot(self):
+        """Test that users cannot warn the bot itself."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.bot_member, reason="Bot warning")
+
+        interaction.response.send_message.assert_called_once()
+        msg = interaction.response.send_message.call_args[0][0]
+        self.assertIn("cannot warn myself", msg)
+
+    async def test_warn_handles_invalid_target_safely(self):
+        """Test that /warn handles None or invalid targets without crashing."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, None, reason="Invalid member")
+
+        interaction.response.send_message.assert_called_once()
+        msg = interaction.response.send_message.call_args[0][0]
+        self.assertIn("Invalid member specified", msg)
+
+    async def test_warn_requires_moderate_members_permission(self):
+        """Test user without moderate_members permission cannot warn members."""
+        interaction = self._create_interaction(self.unprivileged_user)
+        await self.mod_cog.warn_command.callback(self.mod_cog, interaction, self.lower_member, reason="Unpermitted warn")
+
+        interaction.response.send_message.assert_called_once()
+        msg = interaction.response.send_message.call_args[0][0]
+        self.assertIn("You do not have permission", msg)
+
+    # --- /warnings & /clear_warnings Tests ---
+
+    async def test_warnings_works_on_any_member(self):
+        """Test /warnings allows viewing history for any member, including higher roles and owner."""
+        # Issue warnings to lower, high, and owner
+        mod_interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warn_command.callback(self.mod_cog, mod_interaction, self.lower_member, reason="Warn 1")
+        await self.mod_cog.warn_command.callback(self.mod_cog, mod_interaction, self.high_member, reason="Warn 2")
+        await self.mod_cog.warn_command.callback(self.mod_cog, mod_interaction, self.owner, reason="Warn 3")
+
+        # View warnings for high_member
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warnings_command.callback(self.mod_cog, interaction, self.high_member)
+        interaction.response.send_message.assert_called_once()
+        embed = interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(embed)
+        self.assertIn("Warning History", embed.title)
+
+        # View warnings for owner
+        owner_interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warnings_command.callback(self.mod_cog, owner_interaction, self.owner)
+        owner_interaction.response.send_message.assert_called_once()
+        owner_embed = owner_interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(owner_embed)
+        self.assertIn("Warning History", owner_embed.title)
+
+    async def test_warnings_handles_invalid_target_safely(self):
+        """Test /warnings handles invalid/None target safely."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.warnings_command.callback(self.mod_cog, interaction, None)
+        interaction.response.send_message.assert_called_once()
+        msg = interaction.response.send_message.call_args[0][0]
+        self.assertIn("Invalid member specified", msg)
+
+    async def test_clear_warnings_requires_permissions(self):
+        """Test /clear_warnings is restricted to members with moderate_members permission."""
+        # Unprivileged user denied
+        unpriv_interaction = self._create_interaction(self.unprivileged_user)
+        await self.mod_cog.clear_warnings_command.callback(self.mod_cog, unpriv_interaction, self.lower_member)
+        unpriv_interaction.response.send_message.assert_called_once()
+        self.assertIn("You do not have permission", unpriv_interaction.response.send_message.call_args[0][0])
+
+        # Moderator permitted
+        mod_interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.clear_warnings_command.callback(self.mod_cog, mod_interaction, self.lower_member)
+        mod_interaction.response.send_message.assert_called_once()
+
+    # --- Destructive Actions Still Enforce Role Hierarchy ---
+
+    async def test_destructive_kick_enforces_role_hierarchy(self):
+        """Test destructive /kick still enforces role hierarchy and cannot target equals/higher roles or owner."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.kick_command.callback(self.mod_cog, interaction, self.high_member, reason="Illegal kick")
+        self.high_member.kick.assert_not_called()
+        self.assertIn("equal or higher role", interaction.response.send_message.call_args[0][0])
+
+        interaction_owner = self._create_interaction(self.moderator)
+        await self.mod_cog.kick_command.callback(self.mod_cog, interaction_owner, self.owner, reason="Owner kick")
+        self.owner.kick.assert_not_called()
+        self.assertIn("server owner", interaction_owner.response.send_message.call_args[0][0])
+
+    async def test_destructive_timeout_enforces_role_hierarchy(self):
+        """Test destructive /timeout still enforces role hierarchy and cannot target equals/higher roles or owner."""
+        interaction = self._create_interaction(self.moderator)
+        await self.mod_cog.timeout_command.callback(self.mod_cog, interaction, self.high_member, minutes=5, reason="Illegal timeout")
+        self.high_member.timeout.assert_not_called()
+        self.assertIn("equal or higher role", interaction.response.send_message.call_args[0][0])
+
+        interaction_owner = self._create_interaction(self.moderator)
+        await self.mod_cog.timeout_command.callback(self.mod_cog, interaction_owner, self.owner, minutes=5, reason="Owner timeout")
+        self.owner.timeout.assert_not_called()
+        self.assertIn("server owner", interaction_owner.response.send_message.call_args[0][0])
 
 if __name__ == "__main__":
     unittest.main()
