@@ -56,6 +56,48 @@ class TestDatabasePersistence(unittest.IsolatedAsyncioTestCase):
         db.set_database_url(TEST_DB_URL, use_null_pool=True)
         self.assertTrue(db.is_db_connected())
 
+    def test_postgresql_selection_when_configured(self):
+        """Test that PostgreSQL is selected when DATABASE_URL is configured."""
+        db.configure_database(TEST_DB_URL, use_null_pool=True)
+        self.assertEqual(db.DATABASE_URL, TEST_DB_URL)
+        self.assertEqual(db.engine.dialect.name, "postgresql")
+        self.assertTrue(db.is_db_connected())
+
+    def test_sqlite_fallback_when_empty(self):
+        """Test that SQLite fallback is automatically selected when DATABASE_URL is empty or unset."""
+        # Empty string fallback
+        db.configure_database("", use_null_pool=True)
+        self.assertEqual(db.DATABASE_URL, db.DEFAULT_SQLITE_URL)
+        self.assertEqual(db.engine.dialect.name, "sqlite")
+        self.assertTrue(db.is_db_connected())
+
+        # None / unset fallback
+        with patch.dict(os.environ, {"DATABASE_URL": ""}):
+            db.configure_database(None, use_null_pool=True)
+            self.assertEqual(db.DATABASE_URL, db.DEFAULT_SQLITE_URL)
+            self.assertEqual(db.engine.dialect.name, "sqlite")
+            self.assertTrue(db.is_db_connected())
+
+        # Restore test db
+        db.set_database_url(TEST_DB_URL, use_null_pool=True)
+
+    async def test_in_memory_fallback_when_initialization_fails(self):
+        """Test that in-memory fallback is engaged when database connection fails."""
+        # Test with unreachable connection
+        db.set_database_url("postgresql+asyncpg://invalid:invalid@127.0.0.1:9999/nonexistent", use_null_pool=True)
+        success = await db.init_db()
+        self.assertFalse(success)
+        self.assertFalse(db.is_db_connected())
+
+        # Test when engine is None
+        db.set_database_url(None)
+        success = await db.init_db()
+        self.assertFalse(success)
+        self.assertFalse(db.is_db_connected())
+
+        # Restore test db
+        db.set_database_url(TEST_DB_URL, use_null_pool=True)
+
     async def test_guild_config_persistence(self):
         """Test persisting and querying GuildConfig records."""
         async with db.async_session() as session:
@@ -337,6 +379,153 @@ class TestDatabasePersistence(unittest.IsolatedAsyncioTestCase):
             interaction = MagicMock(guild=mock_guild, user=mock_target, response=AsyncMock())
             await levels.add_xp_command.callback(levels, interaction, user=mock_target, amount=250)
             self.assertEqual(levels.guild_xp[999][2]["xp"], 250)
+
+SQLITE_TEST_URL = "sqlite+aiosqlite:///data/test_sqlite_fallback.db"
+
+class TestSQLiteFallbackPersistence(unittest.IsolatedAsyncioTestCase):
+    """Verify that SQLite works as an automatic fallback with full persistence support."""
+
+    @classmethod
+    def setUpClass(cls):
+        db.set_database_url(SQLITE_TEST_URL, use_null_pool=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        db.set_database_url(None)
+        # Clean up temporary test database files
+        for suffix in ("", "-shm", "-wal"):
+            path = f"data/test_sqlite_fallback.db{suffix}"
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+
+    async def asyncSetUp(self):
+        success = await db.init_db()
+        self.assertTrue(success)
+
+    async def asyncTearDown(self):
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    await session.execute(delete(ModerationCase))
+                    await session.execute(delete(GuildConfig))
+                    await session.execute(delete(UserXP))
+                    await session.commit()
+            except Exception:
+                pass
+
+    async def test_sqlite_initialization_and_dialect(self):
+        """Verify SQLite initialization and dialect name."""
+        self.assertTrue(db.is_db_connected())
+        self.assertEqual(db.engine.dialect.name, "sqlite")
+        self.assertEqual(db.DATABASE_URL, SQLITE_TEST_URL)
+
+    async def test_sqlite_guild_config_crud(self):
+        """Verify CRUD operations on GuildConfig using SQLite."""
+        # Create
+        async with db.async_session() as session:
+            config = GuildConfig(guild_id=987123, welcome_channel_id=111, modlog_channel_id=222, levelup_enabled=False)
+            session.add(config)
+            await session.commit()
+
+        # Read
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 987123)
+            result = await session.execute(stmt)
+            fetched = result.scalar_one_or_none()
+            self.assertIsNotNone(fetched)
+            self.assertEqual(fetched.welcome_channel_id, 111)
+            self.assertEqual(fetched.modlog_channel_id, 222)
+            self.assertFalse(fetched.levelup_enabled)
+
+        # Update
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 987123)
+            result = await session.execute(stmt)
+            record = result.scalar_one()
+            record.welcome_channel_id = 333
+            record.levelup_enabled = True
+            await session.commit()
+
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 987123)
+            result = await session.execute(stmt)
+            updated = result.scalar_one()
+            self.assertEqual(updated.welcome_channel_id, 333)
+            self.assertTrue(updated.levelup_enabled)
+
+        # Delete
+        async with db.async_session() as session:
+            await session.execute(delete(GuildConfig).where(GuildConfig.guild_id == 987123))
+            await session.commit()
+
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 987123)
+            result = await session.execute(stmt)
+            self.assertIsNone(result.scalar_one_or_none())
+
+    async def test_sqlite_user_xp_crud(self):
+        """Verify CRUD operations on UserXP using SQLite."""
+        # Create
+        async with db.async_session() as session:
+            user_xp = UserXP(guild_id=987123, user_id=456789, xp=100, level=1)
+            session.add(user_xp)
+            await session.commit()
+
+        # Read
+        async with db.async_session() as session:
+            stmt = select(UserXP).where(UserXP.guild_id == 987123, UserXP.user_id == 456789)
+            result = await session.execute(stmt)
+            fetched = result.scalar_one_or_none()
+            self.assertIsNotNone(fetched)
+            self.assertEqual(fetched.xp, 100)
+            self.assertEqual(fetched.level, 1)
+
+        # Update
+        async with db.async_session() as session:
+            stmt = select(UserXP).where(UserXP.guild_id == 987123, UserXP.user_id == 456789)
+            result = await session.execute(stmt)
+            record = result.scalar_one()
+            record.xp += 250
+            record.level = 2
+            await session.commit()
+
+        async with db.async_session() as session:
+            stmt = select(UserXP).where(UserXP.guild_id == 987123, UserXP.user_id == 456789)
+            result = await session.execute(stmt)
+            updated = result.scalar_one()
+            self.assertEqual(updated.xp, 350)
+            self.assertEqual(updated.level, 2)
+
+    async def test_sqlite_moderation_cases_crud(self):
+        """Verify CRUD operations on ModerationCase using SQLite."""
+        # Create
+        async with db.async_session() as session:
+            case1 = ModerationCase(guild_id=987123, user_id=456789, moderator_id=1, moderator_name="Mod1", action="warn", reason="First warning")
+            case2 = ModerationCase(guild_id=987123, user_id=456789, moderator_id=1, moderator_name="Mod1", action="warn", reason="Second warning")
+            session.add_all([case1, case2])
+            await session.commit()
+
+        # Read
+        async with db.async_session() as session:
+            stmt = select(ModerationCase).where(ModerationCase.guild_id == 987123, ModerationCase.user_id == 456789)
+            result = await session.execute(stmt)
+            cases = result.scalars().all()
+            self.assertEqual(len(cases), 2)
+            self.assertEqual(cases[0].reason, "First warning")
+            self.assertEqual(cases[1].reason, "Second warning")
+
+        # Delete
+        async with db.async_session() as session:
+            await session.execute(delete(ModerationCase).where(ModerationCase.guild_id == 987123, ModerationCase.user_id == 456789))
+            await session.commit()
+
+        async with db.async_session() as session:
+            stmt = select(ModerationCase).where(ModerationCase.guild_id == 987123, ModerationCase.user_id == 456789)
+            result = await session.execute(stmt)
+            self.assertEqual(len(result.scalars().all()), 0)
 
 if __name__ == "__main__":
     unittest.main()

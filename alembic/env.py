@@ -18,7 +18,7 @@ src_path = str(Path(__file__).resolve().parent.parent / "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
-from database.database import Base
+from database.database import Base, DEFAULT_SQLITE_URL, _ensure_sqlite_directory
 import database.models  # noqa: F401
 
 config = context.config
@@ -28,7 +28,13 @@ if config.config_file_name is not None:
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    database_url = database_url.strip().strip("'\"")
+
+if not database_url:
+    database_url = DEFAULT_SQLITE_URL
+
+_ensure_sqlite_directory(database_url)
+config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 
@@ -39,13 +45,18 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=True,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_as_batch=True,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
