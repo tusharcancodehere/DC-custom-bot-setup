@@ -55,7 +55,9 @@ Conversational AI powered by dual providers with automated fallback:
 ### 👋 Welcome System
 Server greeting and onboarding announcements:
 * `/welcome` — Displays a formatted welcome embed loaded from [`embed.json`](src/features/welcome/embed.json).
-* **Dynamic Placeholders**: Supports clickable Discord channel placeholders such as `{rules}`, `{roles}`, `{general}`, and `{support}` that resolve to server channels dynamically.
+* `/set_welcome_channel` — Configure or view the designated channel for automatic welcome messages (`Manage Server` permission required).
+* **Automatic Join & Leave Events**: Greets incoming members automatically with their avatar, server name, and channel mentions; posts polite farewell notifications on member leave.
+* **Dynamic Placeholders**: Supports clickable Discord channel placeholders such as `{rules}`, `{roles}`, `{announcements}`, `{general}`, and `{support}` that resolve to server channels dynamically.
 
 ### ⚙️ General & Utility
 Core maintenance and diagnostic commands:

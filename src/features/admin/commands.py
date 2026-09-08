@@ -110,14 +110,19 @@ class Admin(commands.Cog):
         rules_channel = guild.rules_channel.mention if guild.rules_channel else "*None*"
         verification = str(guild.verification_level).capitalize()
 
+        welcome_cog = self.bot.get_cog("Welcome")
+        welcome_ch = welcome_cog.get_welcome_channel(guild) if welcome_cog else None
+        welcome_channel = welcome_ch.mention if welcome_ch else "*None*"
+
         embed = discord.Embed(title=f"⚙️ Administrative Settings: {guild.name}", color=ADMIN_COLOR)
         embed.add_field(name="🛡️ Verification Level", value=f"`{verification}`", inline=True)
         embed.add_field(name="📜 Rules Channel", value=rules_channel, inline=True)
         embed.add_field(name="📢 System Channel", value=system_channel, inline=True)
+        embed.add_field(name="👋 Welcome Channel", value=welcome_channel, inline=True)
         embed.add_field(name="🤖 Bot Role", value=guild.me.top_role.mention, inline=True)
         embed.add_field(
             name="💡 Administration Note",
-            value="This server uses default settings. Future updates will allow configuring custom channels and roles.",
+            value="Configure channels using `/set_welcome_channel` and related commands.",
             inline=False,
         )
 
