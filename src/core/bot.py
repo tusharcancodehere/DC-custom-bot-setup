@@ -64,7 +64,7 @@ class CustomBot(commands.Bot):
             if isinstance(error, commands.NotOwner):
                 await ctx.send("❌ Only the bot owner can use this command.")
             else:
-                logging.error(f"Error in shutdown command: {error}")
+                logging.error(f"Error in shutdown command: {error}", exc_info=error)
 
     async def setup_hook(self):
         await init_db()

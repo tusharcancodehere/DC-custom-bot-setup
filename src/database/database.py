@@ -27,13 +27,19 @@ if DATABASE_URL:
         async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     except Exception as error:
         logging.warning(f"Database engine initialization failed: {error}")
+        DATABASE_URL = None
 
 
 async def init_db() -> bool:
     global engine, async_session
-    if not engine or not DATABASE_URL:
+    if not DATABASE_URL:
         logging.info("Database: unavailable (DATABASE_URL not configured)")
         print("Database: unavailable (DATABASE_URL not configured)")
+        return False
+
+    if not engine:
+        logging.warning("Database: unavailable (database engine could not be initialized)")
+        print("Database: unavailable (database engine could not be initialized)")
         return False
 
     try:
