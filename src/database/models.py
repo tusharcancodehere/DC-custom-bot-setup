@@ -29,6 +29,8 @@ class GuildConfig(Base):
     guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     welcome_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     modlog_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    welcome_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    leave_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     levelup_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

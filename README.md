@@ -65,8 +65,10 @@ Conversational AI powered by dual providers with automated fallback:
 ### 👋 Welcome System
 Server greeting and onboarding announcements (strictly opt-in):
 * `/welcome` — Displays a preview of the welcome embed loaded from [`embed.json`](src/features/welcome/embed.json) (available in any server as a manual test command).
-* `/set_welcome_channel` — Configure or view the designated channel for automatic welcome messages (`Manage Server` permission required). Setting this channel enables automatic welcome and leave announcements for the server.
-* **Opt-In Join & Leave Events**: Welcome and leave announcements are disabled by default for every guild and only fire when a welcome channel has been explicitly configured. Greets incoming members automatically with their avatar, server name, and channel mentions; posts polite farewell notifications on member leave.
+* `/set_welcome_channel` — Configure or view the designated channel for automatic welcome messages (`Manage Server` permission required). Setting this channel enables welcome and leave announcements for the server.
+* `/toggle_welcome` — Toggle automatic welcome messages on or off, or explicitly enable/disable them (`Manage Server` permission required).
+* `/toggle_leave` — Toggle automatic member departure notifications on or off, or explicitly enable/disable them (`Manage Server` permission required).
+* **Opt-In Join & Leave Events**: Welcome and leave announcements are disabled by default for every guild and only fire when a welcome channel has been explicitly configured and enabled. Greets incoming members automatically with their avatar, server name, and channel mentions; posts polite farewell notifications on member leave.
 * **Dynamic Placeholders**: Supports clickable Discord channel placeholders such as `{rules}`, `{roles}`, `{announcements}`, `{general}`, and `{support}` that resolve to server channels dynamically.
 
 ### 🎵 Music Streaming
@@ -161,7 +163,7 @@ DC-custom-bot-setup/
 │   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, /purge, /warn)
 │   │   ├── music/           # Music streaming (/play, /player, /queue)
 │   │   ├── tickets/         # Support ticket system (/ticket_panel, /ticket_close)
-│   │   └── welcome/         # Welcome announcements & member events (/welcome)
+│   │   └── welcome/         # Welcome announcements & member events (/welcome, /toggle_welcome, /toggle_leave)
 │   ├── views/               # Shared Discord UI components
 │   │   └── common.py
 │   └── database/            # Database engine and models (for planned persistence)

@@ -113,6 +113,8 @@ class TestDatabasePersistence(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(fetched.welcome_channel_id, 987654321)
             self.assertEqual(fetched.modlog_channel_id, 555666777)
             self.assertFalse(fetched.levelup_enabled)
+            self.assertTrue(fetched.welcome_enabled)
+            self.assertTrue(fetched.leave_enabled)
 
     async def test_admin_cog_persistence(self):
         """Test that Admin cog updates GuildConfig and loads persisted settings."""
@@ -183,6 +185,27 @@ class TestDatabasePersistence(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(fresh_welcome.welcome_channels, {})
         await fresh_welcome.load_configs()
         self.assertEqual(fresh_welcome.welcome_channels.get(222333444), 777888999)
+
+        # Toggle welcome and leave settings
+        mock_interaction.response.reset_mock()
+        await welcome_cog.toggle_welcome.callback(welcome_cog, mock_interaction, enable=False)
+        mock_interaction.response.reset_mock()
+        await welcome_cog.toggle_leave.callback(welcome_cog, mock_interaction, enable=False)
+
+        # Verify toggles persisted in database
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 222333444)
+            result = await session.execute(stmt)
+            config = result.scalar_one_or_none()
+            self.assertIsNotNone(config)
+            self.assertFalse(config.welcome_enabled)
+            self.assertFalse(config.leave_enabled)
+
+        # Create fresh Welcome cog and verify load_configs restores toggles
+        fresh_welcome_toggled = Welcome(mock_bot)
+        await fresh_welcome_toggled.load_configs()
+        self.assertFalse(fresh_welcome_toggled.welcome_enabled.get(222333444))
+        self.assertFalse(fresh_welcome_toggled.leave_enabled.get(222333444))
 
     async def test_moderation_cases_persistence(self):
         """Test that Moderation cog records, lists, and clears warning cases in the database."""
@@ -439,6 +462,8 @@ class TestSQLiteFallbackPersistence(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(fetched.welcome_channel_id, 111)
             self.assertEqual(fetched.modlog_channel_id, 222)
             self.assertFalse(fetched.levelup_enabled)
+            self.assertTrue(fetched.welcome_enabled)
+            self.assertTrue(fetched.leave_enabled)
 
         # Update
         async with db.async_session() as session:
@@ -447,6 +472,8 @@ class TestSQLiteFallbackPersistence(unittest.IsolatedAsyncioTestCase):
             record = result.scalar_one()
             record.welcome_channel_id = 333
             record.levelup_enabled = True
+            record.welcome_enabled = False
+            record.leave_enabled = False
             await session.commit()
 
         async with db.async_session() as session:
@@ -455,6 +482,8 @@ class TestSQLiteFallbackPersistence(unittest.IsolatedAsyncioTestCase):
             updated = result.scalar_one()
             self.assertEqual(updated.welcome_channel_id, 333)
             self.assertTrue(updated.levelup_enabled)
+            self.assertFalse(updated.welcome_enabled)
+            self.assertFalse(updated.leave_enabled)
 
         # Delete
         async with db.async_session() as session:
