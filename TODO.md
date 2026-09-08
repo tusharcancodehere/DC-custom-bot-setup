@@ -130,6 +130,7 @@ All active features are beginner-friendly, fully multi-server compatible, and gl
 ## Documentation
 
 * [x] Beginner-friendly [README.md](README.md)
+* [x] Discord Developer Portal setup & credentials guide ([README.md](README.md#discord-bot-setup--credentials-guide))
 * [x] Contributor guidelines in [CONTRIBUTING.md](CONTRIBUTING.md)
 * [x] Community standards in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 * [x] Vulnerability reporting in [SECURITY.md](SECURITY.md)

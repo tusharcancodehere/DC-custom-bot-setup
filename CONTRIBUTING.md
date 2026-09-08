@@ -109,10 +109,11 @@ Create your local `.env` file from the example template:
 cp .env.example .env
 ```
 
-Open `.env` and fill in your development credentials:
+Open `.env` and fill in your development credentials (see the beginner-friendly [Discord Bot Setup Guide](README.md#discord-bot-setup--credentials-guide) for step-by-step instructions on generating these):
 
 * `DISCORD_TOKEN`: Your bot token from the [Discord Developer Portal](https://discord.com/developers/applications).
-* `APPLICATION_ID`: Your Discord application/client ID.
+* `APPLICATION_ID`: Your Discord application/client ID from the [Discord Developer Portal](https://discord.com/developers/applications).
+* **Privileged Gateway Intents**: Ensure both **Server Members Intent** and **Message Content Intent** are toggled **ON** in the Developer Portal (under **Bot** -> **Privileged Gateway Intents**).
 * `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, the bot runs without database persistence. See [docs/database.md](docs/database.md) for details.
 * `OPENAI_API_KEY`: (Optional) OpenAI API key for testing AI commands.
 * `GEMINI_API_KEY`: (Optional) Google Gemini API key for testing AI fallback.

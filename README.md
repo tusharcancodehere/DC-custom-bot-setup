@@ -131,6 +131,59 @@ DC-custom-bot-setup/
 
 ---
 
+## Discord Bot Setup & Credentials Guide
+
+Follow these beginner-friendly steps to create your Discord bot in the developer portal, copy your credentials, enable required intents, and invite the bot to your server:
+
+### Step 1: Open the Discord Developer Portal
+1. Navigate to the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Log in with your Discord account if you are not already signed in.
+
+### Step 2: Create a New Discord Application
+1. Click the blue **New Application** button in the top-right corner.
+2. Enter a name for your bot (e.g., `DC Custom Bot`).
+3. Check the box to agree to Discord's Developer Terms of Service and Developer Policy.
+4. Click **Create**.
+
+### Step 3: Copy Your Application ID
+1. In the left navigation sidebar, ensure you are on the **General Information** page.
+2. Locate the field labeled **Application ID**.
+3. Click the **Copy** button beneath the ID.
+4. Keep this value handy — you will paste it as `APPLICATION_ID` in your `.env` file or hosting panel.
+
+### Step 4: Create the Bot and Copy Your Bot Token
+1. In the left sidebar, click on **Bot**.
+2. Click the **Reset Token** button (or **Add Bot** if prompted) and confirm the prompt.
+3. Click **Copy** to copy your bot token immediately.
+   > [!IMPORTANT]
+   > Discord only displays your bot token once! If you lose it or close the page, you will need to click **Reset Token** again. Never share this token with anyone or commit it to GitHub.
+4. Keep this value handy — you will paste it as `DISCORD_TOKEN` in your `.env` file or hosting panel.
+
+### Step 5: Enable Privileged Gateway Intents (Required)
+The bot requires specific Discord Gateway Intents to listen for messages, award XP, and manage members:
+1. Stay on the **Bot** page in the Developer Portal.
+2. Scroll down to the section titled **Privileged Gateway Intents**.
+3. Toggle the switch to **ON** for both:
+   * **Server Members Intent** (required for member management, welcome cards, and permission checks)
+   * **Message Content Intent** (required for awarding chat XP and reading command content)
+4. Click the green **Save Changes** button at the bottom of the page.
+
+### Step 6: Invite the Bot to Your Discord Server
+1. In the left sidebar, navigate to **OAuth2** -> **URL Generator**.
+2. Under the **Scopes** section, check the following boxes:
+   * `bot`
+   * `applications.commands` (required to register slash commands)
+3. Under the **Bot Permissions** section that appears below, select either:
+   * **Administrator** (recommended for testing or full server management), or:
+   * Select specific permissions:
+     * *General*: Manage Roles, Kick Members, Ban Members, Moderate Members, View Audit Log, Read Messages/View Channels.
+     * *Text*: Send Messages, Send Messages in Threads, Manage Messages, Embed Links, Attach Files, Read Message History, Mention @everyone.
+     * *Voice*: Connect, Speak, Use Voice Activity.
+4. Scroll to the bottom of the page and copy the link from the **Generated URL** box.
+5. Paste this URL into your web browser, select your target Discord server from the dropdown, and click **Authorize**.
+
+---
+
 ## Setup & Deployment Options
 
 ### Configuration & Environment Variables
