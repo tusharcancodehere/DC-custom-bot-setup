@@ -1,6 +1,6 @@
 [project]
 name = "dc-custom-bot-setup"
-version = "0.1.0"
+version = "1.0.0"
 description = "A modular, hosting-friendly Discord bot built with discord.py"
 readme = "README.md"
 authors = [
