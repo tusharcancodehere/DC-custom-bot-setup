@@ -80,6 +80,13 @@ High-quality voice channel audio streaming powered by `yt-dlp` and FFmpeg with i
 * `/247` — Toggle 24/7 continuous voice connection mode.
 * **Resilient Audio Pipeline**: Runs yt-dlp in a background worker thread, cleans cached audio upon completion, and translates streaming errors into helpful user messages.
 
+### 🎫 Support Tickets
+Interactive private ticket channel management for member assistance:
+* `/ticket_panel` — Post the interactive ticket creation panel with the "Create Ticket" button (`Manage Server` permission required).
+* `/ticket_close` — Close the current ticket channel and restrict member sending permissions.
+* `/ticket_delete` — Permanently delete a closed ticket channel (`Manage Channels` permission required).
+* **Automated Isolation & Overwrites**: Configures private channel permissions hiding tickets from `@everyone` while granting access only to the ticket opener and server staff. Prevents duplicate open tickets per user.
+
 ### ⚙️ General & Utility
 Core maintenance and diagnostic commands:
 * `/ping` — Check bot connectivity, WebSocket response latency, and operational status.
@@ -93,7 +100,6 @@ Core maintenance and diagnostic commands:
 The following features are planned on our roadmap:
 
 * **🗄️ Database Persistence (Planned)**: PostgreSQL and SQLAlchemy 2.0 integration with Alembic schema migrations for persistent server configuration and long-term XP storage across bot restarts.
-* **🎫 Support Tickets (Planned)**: Ticket creation buttons, private support channels, and transcript archives.
 * **🎲 Mini-Games (Planned)**: Interactive server games such as coin flip, dice roll, rock-paper-scissors, and trivia.
 
 ---
@@ -132,6 +138,7 @@ DC-custom-bot-setup/
 │   │   ├── levels/          # Level system (/level, /rank, /leaderboard)
 │   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, /purge, /warn)
 │   │   ├── music/           # Music streaming (/play, /player, /queue)
+│   │   ├── tickets/         # Support ticket system (/ticket_panel, /ticket_close)
 │   │   └── welcome/         # Welcome announcements & member events (/welcome)
 │   ├── views/               # Shared Discord UI components
 │   │   └── common.py
