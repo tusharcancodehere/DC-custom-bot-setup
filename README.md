@@ -95,6 +95,14 @@ Interactive server entertainment and casual games:
 * `/rps` — Play Rock, Paper, Scissors directly against the bot with win, loss, and tie detection.
 * `/trivia` — Test your knowledge with interactive multiple-choice trivia questions featuring clickable buttons.
 
+### 🗄️ Database & Persistence
+PostgreSQL storage with SQLAlchemy 2.0 async sessions and Alembic schema migrations:
+* **Persistent XP & Leveling**: User XP and levels are stored in PostgreSQL (`user_xp` table) and survive bot restarts.
+* **Server Configurations**: Welcome channel and moderation log channel settings are persisted in PostgreSQL (`guild_config` table).
+* **Moderation Audit Log**: Member warnings and disciplinary cases are tracked in PostgreSQL (`moderation_cases` table).
+* **Graceful Degradation**: If `DATABASE_URL` is omitted or PostgreSQL is offline, all features continue functioning seamlessly using in-memory caches.
+* See [docs/database.md](docs/database.md) for architecture, setup options, and schema migrations.
+
 ### ⚙️ General & Utility
 Core maintenance and diagnostic commands:
 * `/ping` — Check bot connectivity, WebSocket response latency, and operational status.
@@ -107,7 +115,8 @@ Core maintenance and diagnostic commands:
 
 The following features are planned on our roadmap:
 
-* **🗄️ Database Persistence (Planned)**: PostgreSQL and SQLAlchemy 2.0 integration with Alembic schema migrations for persistent server configuration and long-term XP storage across bot restarts.
+* **🛡️ Advanced Moderation**: Automated spam filtering, invite link blocking, and customizable auto-moderation rules.
+* **👋 Advanced Welcome**: Automated role assignment on member join and dynamic banner generation.
 
 ---
 

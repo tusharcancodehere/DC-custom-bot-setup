@@ -21,13 +21,39 @@ class Base(DeclarativeBase):
 engine = None
 async_session = None
 
+from sqlalchemy.pool import NullPool
+
 if DATABASE_URL:
     try:
-        engine = create_async_engine(DATABASE_URL, echo=False)
+        engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
         async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     except Exception as error:
         logging.warning("Database engine initialization failed: %s", error, exc_info=True)
         DATABASE_URL = None
+
+def is_db_connected() -> bool:
+    """Return True if the database engine and sessionmaker are configured and active."""
+    return engine is not None and async_session is not None
+
+def set_database_url(url: str | None, use_null_pool: bool = False):
+    """Set or update the database URL and initialize engine and sessionmaker."""
+    global DATABASE_URL, engine, async_session
+    DATABASE_URL = url.strip().strip("'\"") if url else None
+    if DATABASE_URL:
+        try:
+            kwargs = {"echo": False, "pool_pre_ping": True}
+            if use_null_pool:
+                kwargs["poolclass"] = NullPool
+            engine = create_async_engine(DATABASE_URL, **kwargs)
+            async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        except Exception as error:
+            logging.warning("Database engine initialization failed: %s", error)
+            DATABASE_URL = None
+            engine = None
+            async_session = None
+    else:
+        engine = None
+        async_session = None
 
 
 async def init_db() -> bool:
