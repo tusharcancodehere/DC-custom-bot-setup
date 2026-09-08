@@ -67,8 +67,10 @@ This document is the source of truth for project progress, tracking implemented 
 ### Welcome
 * [x] Welcome announcement preview command (`/welcome`)
 * [x] Server-configurable welcome channel command (`/set_welcome_channel`)
-* [x] Opt-in member join event listener (`on_member_join` - disabled until channel configured)
-* [x] Opt-in member leave announcement listener (`on_member_remove` - disabled until channel configured)
+* [x] Server welcome announcements toggle command (`/toggle_welcome`)
+* [x] Server member departure notifications toggle command (`/toggle_leave`)
+* [x] Opt-in member join event listener (`on_member_join` - disabled until channel configured and enabled)
+* [x] Opt-in member leave announcement listener (`on_member_remove` - disabled until channel configured and enabled)
 * [x] JSON-based welcome embed template ([`src/features/welcome/embed.json`](src/features/welcome/embed.json))
 * [x] Dynamic channel mention placeholders (`{rules}`, `{roles}`, `{announcements}`, `{general}`, `{support}`)
 

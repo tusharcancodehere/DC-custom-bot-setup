@@ -21,6 +21,9 @@ class Welcome(commands.Cog):
         self.bot = bot
         # Maps guild_id -> channel_id for custom welcome channels
         self.welcome_channels: dict[int, int] = {}
+        # Maps guild_id -> bool for toggle state (default True when channel is configured)
+        self.welcome_enabled: dict[int, bool] = {}
+        self.leave_enabled: dict[int, bool] = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -28,7 +31,7 @@ class Welcome(commands.Cog):
         await self.load_configs()
 
     async def load_configs(self):
-        """Load welcome channel configurations from database into memory."""
+        """Load welcome channel and toggle configurations from database into memory."""
         if not db.async_session:
             return
         try:
@@ -37,14 +40,15 @@ class Welcome(commands.Cog):
                 for config in result.scalars().all():
                     if config.welcome_channel_id:
                         self.welcome_channels[config.guild_id] = config.welcome_channel_id
+                    self.welcome_enabled[config.guild_id] = getattr(config, "welcome_enabled", True)
+                    self.leave_enabled[config.guild_id] = getattr(config, "leave_enabled", True)
         except Exception as e:
             logging.error(f"Failed to load welcome configs from database: {e}")
-
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         """Handle missing permissions gracefully with a friendly message."""
         if isinstance(error, app_commands.MissingPermissions):
-            message = "❌ You need the **Manage Server** permission to configure the welcome channel."
+            message = "❌ You need the **Manage Server** permission to configure welcome settings."
         else:
             message = f"❌ An error occurred: `{error}`"
 
@@ -70,6 +74,18 @@ class Welcome(commands.Cog):
             return None
 
         return None
+
+    def is_welcome_enabled(self, guild: discord.Guild | None) -> bool:
+        """Return True if welcome messages are enabled and a welcome channel is configured."""
+        if not guild or guild.id not in self.welcome_channels:
+            return False
+        return self.welcome_enabled.get(guild.id, True)
+
+    def is_leave_enabled(self, guild: discord.Guild | None) -> bool:
+        """Return True if leave messages are enabled and a welcome channel is configured."""
+        if not guild or guild.id not in self.welcome_channels:
+            return False
+        return self.leave_enabled.get(guild.id, True)
 
     def resolve_channels(self, guild: discord.Guild) -> dict:
         """Resolve common channel names to mentions for embed placeholders."""
@@ -125,6 +141,9 @@ class Welcome(commands.Cog):
         if member.bot:
             return
 
+        if not self.is_welcome_enabled(member.guild):
+            return
+
         channel = self.get_welcome_channel(member.guild)
         if not channel:
             return
@@ -144,6 +163,9 @@ class Welcome(commands.Cog):
     async def on_member_remove(self, member: discord.Member):
         """Send a polite farewell notification when a member leaves."""
         if member.bot:
+            return
+
+        if not self.is_leave_enabled(member.guild):
             return
 
         channel = self.get_welcome_channel(member.guild)
@@ -168,6 +190,92 @@ class Welcome(commands.Cog):
         embed = self.build_welcome_embed(interaction.guild, interaction.user)
         await interaction.response.send_message(embed=embed)
 
+    @app_commands.command(name="toggle_welcome", description="Toggle automatic welcome messages on or off")
+    @app_commands.describe(enable="Enable or disable welcome messages (leave empty to toggle)")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def toggle_welcome(self, interaction: discord.Interaction, enable: bool | None = None):
+        """Toggle or set whether automatic welcome messages are sent when new members join."""
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "manage_guild", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You need the **Manage Server** permission to use this command.", ephemeral=True)
+            return
+
+        guild_id = interaction.guild.id
+        current_state = self.welcome_enabled.get(guild_id, True)
+        new_state = enable if enable is not None else not current_state
+        self.welcome_enabled[guild_id] = new_state
+
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(GuildConfig).where(GuildConfig.guild_id == guild_id)
+                    result = await session.execute(stmt)
+                    config = result.scalar_one_or_none()
+                    if config:
+                        config.welcome_enabled = new_state
+                    else:
+                        config = GuildConfig(guild_id=guild_id, welcome_enabled=new_state)
+                        session.add(config)
+                    await session.commit()
+            except Exception as e:
+                logging.error(f"Failed to persist welcome_enabled for guild {guild_id}: {e}")
+
+        channel = self.get_welcome_channel(interaction.guild)
+        if new_state:
+            if channel:
+                await interaction.response.send_message(f"✅ Welcome messages are now **enabled** in {channel.mention}.")
+            else:
+                await interaction.response.send_message("✅ Welcome messages are now **enabled**. ⚠️ Note: No welcome channel is currently configured. Set one with `/set_welcome_channel`.")
+        else:
+            await interaction.response.send_message("✅ Welcome messages are now **disabled**.")
+
+    @app_commands.command(name="toggle_leave", description="Toggle automatic member leave messages on or off")
+    @app_commands.describe(enable="Enable or disable leave messages (leave empty to toggle)")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def toggle_leave(self, interaction: discord.Interaction, enable: bool | None = None):
+        """Toggle or set whether automatic leave notifications are sent when members leave."""
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "manage_guild", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You need the **Manage Server** permission to use this command.", ephemeral=True)
+            return
+
+        guild_id = interaction.guild.id
+        current_state = self.leave_enabled.get(guild_id, True)
+        new_state = enable if enable is not None else not current_state
+        self.leave_enabled[guild_id] = new_state
+
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(GuildConfig).where(GuildConfig.guild_id == guild_id)
+                    result = await session.execute(stmt)
+                    config = result.scalar_one_or_none()
+                    if config:
+                        config.leave_enabled = new_state
+                    else:
+                        config = GuildConfig(guild_id=guild_id, leave_enabled=new_state)
+                        session.add(config)
+                    await session.commit()
+            except Exception as e:
+                logging.error(f"Failed to persist leave_enabled for guild {guild_id}: {e}")
+
+        channel = self.get_welcome_channel(interaction.guild)
+        if new_state:
+            if channel:
+                await interaction.response.send_message(f"✅ Leave messages are now **enabled** in {channel.mention}.")
+            else:
+                await interaction.response.send_message("✅ Leave messages are now **enabled**. ⚠️ Note: No welcome channel is currently configured. Set one with `/set_welcome_channel`.")
+        else:
+            await interaction.response.send_message("✅ Leave messages are now **disabled**.")
+
     @app_commands.command(name="set_welcome_channel", description="Configure the channel for welcome messages")
     @app_commands.describe(channel="The text channel for welcome messages (leave empty to view current)")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -180,7 +288,13 @@ class Welcome(commands.Cog):
         if channel is None:
             current = self.get_welcome_channel(interaction.guild)
             if current:
-                await interaction.response.send_message(f"📢 Welcome messages are currently sent to {current.mention}.")
+                wel_status = "Enabled" if self.is_welcome_enabled(interaction.guild) else "Disabled"
+                leave_status = "Enabled" if self.is_leave_enabled(interaction.guild) else "Disabled"
+                await interaction.response.send_message(
+                    f"📢 Welcome channel: {current.mention}\n"
+                    f"• Welcome messages: **{wel_status}** (`/toggle_welcome`)\n"
+                    f"• Leave messages: **{leave_status}** (`/toggle_leave`)"
+                )
             else:
                 await interaction.response.send_message("📢 No welcome channel is currently configured.")
             return
@@ -201,7 +315,9 @@ class Welcome(commands.Cog):
             except Exception as e:
                 logging.error(f"Failed to persist welcome channel for guild {interaction.guild.id}: {e}")
 
-        await interaction.response.send_message(f"✅ Welcome channel has been set to {channel.mention}.")
+        await interaction.response.send_message(
+            f"✅ Welcome channel has been set to {channel.mention}. Use `/toggle_welcome` and `/toggle_leave` to manage announcement alerts."
+        )
 
 async def setup(bot):
     await bot.add_cog(Welcome(bot))
