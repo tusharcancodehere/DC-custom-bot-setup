@@ -1,0 +1,8 @@
+discord-py>=2.7.1
+python-dotenv>=1.2.3
+sqlalchemy>=2.0.52
+aiosqlite>=0.22.1
+alembic>=1.19.1
+asyncpg>=0.31.0
+pynacl>=1.6.2
+yt-dlp>=2026.8.19
