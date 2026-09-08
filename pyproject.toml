@@ -9,20 +9,16 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.14.3",
+    "aiosqlite>=0.22.1",
     "alembic>=1.19.1",
     "asyncpg>=0.31.0",
-    "davey>=0.1.6",
     "discord-py>=2.7.1",
     "google-genai>=2.22.0",
-    "jinja2>=3.1.6",
     "openai>=3.8.0",
-    "pillow>=12.3.0",
     "pynacl>=1.6.2",
     "python-dotenv>=1.2.3",
     "sqlalchemy>=2.0.52",
-    "yt-dlp[default]>=2026.8.19",
-    "yt-dlp-ejs>=0.8.0",
-    "aiosqlite>=0.22.1",
+    "yt-dlp>=2026.8.19",
 ]
 
 [build-system]
