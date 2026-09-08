@@ -26,7 +26,7 @@ if DATABASE_URL:
         engine = create_async_engine(DATABASE_URL, echo=False)
         async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     except Exception as error:
-        logging.warning(f"Database engine initialization failed: {error}")
+        logging.warning("Database engine initialization failed: %s", error, exc_info=True)
         DATABASE_URL = None
 
 
