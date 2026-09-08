@@ -31,7 +31,7 @@ Member and message moderation commands equipped with permission checks, role hie
 * `/lock` — Lock a text channel to prevent regular members from sending messages.
 * `/unlock` — Unlock a locked text channel, restoring member chat permissions.
 * `/slowmode` — Configure or disable chat cooldown delay for a channel (up to 6 hours).
-* **Security & Hierarchy Checks**: Enforces server-side permissions for both the invoker (`has_permissions`) and the bot (`bot_has_permissions`). Strictly protects against targeting server owners, the bot itself, or members with equal or higher roles than the invoker or bot. Server owners bypass invoker role hierarchy restrictions when disciplining other members, but cannot moderate themselves.
+* **Security & Hierarchy Checks**: Enforces server-side permissions for both the invoker (`has_permissions`) and the bot (`bot_has_permissions`). Strictly protects against targeting server owners, the bot itself, or members with equal or higher roles than the invoker or bot for destructive actions (`/ban`, `/kick`, `/timeout`). Server owners bypass invoker role hierarchy restrictions when disciplining other members, but cannot moderate themselves. Non-destructive incident logging actions like `/warn` and `/warnings` work on any member without destructive hierarchy restrictions.
 
 ### 👑 Administration
 Server and bot administrative tools (kept strictly separate from member punishments):
