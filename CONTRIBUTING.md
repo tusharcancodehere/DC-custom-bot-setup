@@ -28,27 +28,31 @@ DC-custom-bot-setup/
 │   │   ├── logging.py       # Centralized application logging
 │   │   └── permissions.py   # Reusable permission and authorization checks
 │   ├── features/            # Modular bot features
-│   │   ├── admin/           # Server administration commands (/serverinfo, /botinfo, /server_settings)
+│   │   ├── admin/           # Server administration commands (/serverinfo, /botinfo, /server_settings, /set_modlog_channel, /announce)
 │   │   ├── ai/              # AI conversation commands (/ask, /clear)
-│   │   ├── games/           # Mini-games and entertainment (planned)
+│   │   ├── games/           # Mini-games and entertainment (/coinflip, /roll, /8ball, /rps, /trivia)
 │   │   ├── general/         # General utility commands (/ping)
 │   │   ├── levels/          # Multi-server level system (/level, /rank, /leaderboard, etc.)
-│   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, /purge, /warn)
-│   │   ├── music/           # Music streaming (in progress)
-│   │   ├── tickets/         # Support ticket system (planned)
-│   │   └── welcome/         # Welcome embed templates (/welcome)
+│   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, /purge, /warn, /lock, /unlock, /slowmode)
+│   │   ├── music/           # Music streaming and playback (/play, /player, /queue, etc.)
+│   │   ├── tickets/         # Support ticket system (/ticket_panel, /ticket_close, /ticket_delete)
+│   │   └── welcome/         # Welcome embed templates (/welcome, /set_welcome_channel)
 │   ├── views/               # Shared Discord UI components (buttons, modals)
 │   │   └── common.py
-│   └── database/            # Database engine and models (for planned persistence)
+│   └── database/            # Database engine and models (PostgreSQL persistence)
 │       ├── database.py      # Async engine and session factory
 │       └── models.py        # SQLAlchemy models
-├── alembic/                 # Database schema migrations (planned)
+├── alembic/                 # Database schema migrations
 │   ├── versions/            # Migration version scripts
 │   └── env.py               # Async migration runner
+├── .github/                 # GitHub workflows and automation
+│   └── workflows/
+│       └── ci.yml           # Continuous integration test matrix
 ├── docs/                    # Extended documentation guides
 │   └── database.md          # Database guide and architectural notes
 ├── requirements.txt         # Pip dependency requirements for standard hosting
 ├── Dockerfile               # Production container definition
+├── docker-compose.yml       # Multi-container service definition (Bot + PostgreSQL)
 ├── .dockerignore            # Container exclusion rules
 ├── .env.example             # Template for required environment variables
 ├── pyproject.toml           # Project dependencies and tool configuration
@@ -135,7 +139,7 @@ Start the bot locally:
   ```
 
 > [!NOTE]
-> Database persistence is optional and planned. If you are developing database models with `DATABASE_URL` configured, you can apply schema migrations using `uv run alembic upgrade head` or `alembic upgrade head`.
+> Database persistence is optional. If you are running the bot with `DATABASE_URL` configured, apply schema migrations using `uv run alembic upgrade head` or `alembic upgrade head`.
 
 ---
 
