@@ -38,9 +38,13 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Temporary member timeout command (`/timeout`)
 * [x] Bulk message purge command (`/purge` - up to 1,000 messages)
 * [x] Formal direct message warning command (`/warn`)
+* [x] Warning history inspection command (`/warnings`)
+* [x] Clear member warnings command (`/clear_warnings`)
+* [x] Channel lockdown and restore commands (`/lock`, `/unlock`)
+* [x] Channel slowmode management command (`/slowmode`)
 * [x] Optional moderation reasons for all actions
 * [x] Server-side Discord permission checks (`has_permissions`)
-* [x] Role hierarchy protection (blocks targeting owner, bot, or equal/higher roles)
+* [x] Role hierarchy protection across all moderation actions (owner, bot, equal/higher roles)
 * [x] Direct message delivery to warned members
 
 ### Level System
@@ -103,9 +107,6 @@ This document is the source of truth for project progress, tracking implemented 
 * [ ] Moderation case log model (case IDs, infraction history, timestamps)
 
 ### Advanced Moderation
-* [ ] Warning history inspection command
-* [ ] Channel lockdown commands (`/lock`, `/unlock`)
-* [ ] Slowmode management command
 * [ ] Dedicated moderation log channel
 * [ ] Automated spam and invite link filtering
 
