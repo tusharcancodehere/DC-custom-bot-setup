@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, DateTime, Index, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.database import Base
@@ -23,12 +23,13 @@ class UserXP(Base):
     )
 
 class GuildConfig(Base):
-    """Server-specific configuration options like welcome and mod-log channels."""
+    """Server-specific configuration options like welcome, mod-log channels, and level-up announcements."""
     __tablename__ = "guild_config"
 
     guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     welcome_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     modlog_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    levelup_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

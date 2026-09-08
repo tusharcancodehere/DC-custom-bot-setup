@@ -10,7 +10,7 @@ from discord.ext import commands
 from sqlalchemy import func, select
 
 from database import database as db
-from database.models import UserXP
+from database.models import GuildConfig, UserXP
 
 EMBED_FILE = Path(__file__).parent / "embed.json"
 PRIMARY_COLOR = 0x5865F2
@@ -58,10 +58,33 @@ class Levels(commands.Cog):
         self.guild_xp: dict[int, dict[int, dict]] = {}
         # Cooldown tracking: (guild_id, user_id) -> timestamp
         self.cooldowns: dict[tuple[int, int], float] = {}
+        # Track whether level-up announcements are enabled per guild (opt-in; disabled by default)
+        self.levelup_enabled: dict[int, bool] = {}
 
         # Load customizable rank card embed structure
         with open(EMBED_FILE, encoding="utf-8") as file:
             self.embed_data = json.load(file)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Load persisted configurations on bot startup."""
+        await self.load_configs()
+
+    async def load_configs(self):
+        """Load levelup announcement settings from database into memory."""
+        if not db.async_session:
+            return
+        try:
+            async with db.async_session() as session:
+                result = await session.execute(select(GuildConfig))
+                for config in result.scalars().all():
+                    self.levelup_enabled[config.guild_id] = config.levelup_enabled
+        except Exception as e:
+            logging.error(f"Failed to load levelup configs from database: {e}")
+
+    def is_levelup_enabled(self, guild_id: int) -> bool:
+        """Check if level-up announcements are enabled for a guild (disabled by default)."""
+        return self.levelup_enabled.get(guild_id, False)
 
     def get_user_data(self, guild_id: int, user_id: int) -> dict:
         """Get or initialize user XP record for a specific guild."""
@@ -195,8 +218,8 @@ class Levels(commands.Cog):
         user_data["last_xp"] = time.time()
         await self._persist_user_xp(message.guild.id, message.author.id, user_data["xp"], user_data["level"])
 
-        # Send celebration announcement when reaching a new level
-        if new_level > old_level:
+        # Send celebration announcement when reaching a new level (opt-in)
+        if new_level > old_level and self.is_levelup_enabled(message.guild.id):
             embed = discord.Embed(
                 title="🎉 Level Up!",
                 description=f"Congratulations {message.author.mention}, you reached **Level {new_level}**!",
@@ -435,6 +458,62 @@ class Levels(commands.Cog):
         embed.set_thumbnail(url=user.display_avatar.url)
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
+
+    levelup_group = app_commands.Group(name="levelup", description="Configure level-up announcement cards for this server")
+
+    async def _set_levelup_setting(self, interaction: discord.Interaction, enabled: bool):
+        """Update and persist level-up card notification setting for the server."""
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        user_perms = getattr(interaction.user, "guild_permissions", None)
+        if user_perms is not None and not getattr(user_perms, "manage_guild", False) and interaction.user != interaction.guild.owner:
+            await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
+            return
+
+        self.levelup_enabled[interaction.guild.id] = enabled
+        if db.async_session:
+            try:
+                async with db.async_session() as session:
+                    stmt = select(GuildConfig).where(GuildConfig.guild_id == interaction.guild.id)
+                    result = await session.execute(stmt)
+                    config = result.scalar_one_or_none()
+                    if config:
+                        config.levelup_enabled = enabled
+                    else:
+                        config = GuildConfig(guild_id=interaction.guild.id, levelup_enabled=enabled)
+                        session.add(config)
+                    await session.commit()
+            except Exception as e:
+                logging.error(f"Failed to persist levelup setting for guild {interaction.guild.id}: {e}")
+
+        status = "enabled" if enabled else "disabled"
+        icon = "🔔" if enabled else "🔕"
+        await interaction.response.send_message(f"{icon} Level-up announcements are now **{status}** for this server.")
+
+    @levelup_group.command(name="enable", description="Enable level-up announcements in this server")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def levelup_enable(self, interaction: discord.Interaction):
+        """Enable level-up cards for this server."""
+        await self._set_levelup_setting(interaction, True)
+
+    @levelup_group.command(name="disable", description="Disable level-up announcements in this server")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def levelup_disable(self, interaction: discord.Interaction):
+        """Disable level-up cards for this server."""
+        await self._set_levelup_setting(interaction, False)
+
+    @levelup_group.command(name="status", description="Check whether level-up announcements are enabled")
+    async def levelup_status(self, interaction: discord.Interaction):
+        """Check current level-up announcement status for this server."""
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+        is_on = self.is_levelup_enabled(interaction.guild.id)
+        status = "enabled" if is_on else "disabled"
+        icon = "🔔" if is_on else "🔕"
+        await interaction.response.send_message(f"{icon} Level-up announcements are currently **{status}** in this server.")
 
 async def setup(bot):
     await bot.add_cog(Levels(bot))

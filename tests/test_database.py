@@ -70,6 +70,7 @@ class TestDatabasePersistence(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(fetched)
             self.assertEqual(fetched.welcome_channel_id, 987654321)
             self.assertEqual(fetched.modlog_channel_id, 555666777)
+            self.assertFalse(fetched.levelup_enabled)
 
     async def test_admin_cog_persistence(self):
         """Test that Admin cog updates GuildConfig and loads persisted settings."""
@@ -256,6 +257,49 @@ class TestDatabasePersistence(unittest.IsolatedAsyncioTestCase):
         mock_interaction.response.send_message.assert_called_once()
         embed = mock_interaction.response.send_message.call_args[1]["embed"]
         self.assertIn("500", embed.description)
+
+    async def test_levelup_setting_persistence(self):
+        """Test that Levels cog updates GuildConfig and loads persisted levelup_enabled setting."""
+        mock_bot = MagicMock()
+        levels_cog = Levels(mock_bot)
+
+        mock_guild = MagicMock()
+        mock_guild.id = 666777888
+
+        mock_interaction = MagicMock()
+        mock_interaction.guild = mock_guild
+        mock_interaction.user = MagicMock()
+        mock_interaction.user.guild_permissions = MagicMock(manage_guild=True)
+        mock_interaction.response = AsyncMock()
+
+        # Enable level-up announcements
+        await levels_cog.levelup_enable.callback(levels_cog, mock_interaction)
+        self.assertTrue(levels_cog.is_levelup_enabled(666777888))
+
+        # Verify persisted in database
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 666777888)
+            result = await session.execute(stmt)
+            config = result.scalar_one_or_none()
+            self.assertIsNotNone(config)
+            self.assertTrue(config.levelup_enabled)
+
+        # Fresh cog loads from database
+        fresh_levels = Levels(mock_bot)
+        self.assertFalse(fresh_levels.is_levelup_enabled(666777888))
+        await fresh_levels.load_configs()
+        self.assertTrue(fresh_levels.is_levelup_enabled(666777888))
+
+        # Disable setting
+        await fresh_levels.levelup_disable.callback(fresh_levels, mock_interaction)
+        self.assertFalse(fresh_levels.is_levelup_enabled(666777888))
+
+        # Verify persisted in database
+        async with db.async_session() as session:
+            stmt = select(GuildConfig).where(GuildConfig.guild_id == 666777888)
+            result = await session.execute(stmt)
+            config = result.scalar_one_or_none()
+            self.assertFalse(config.levelup_enabled)
 
     async def test_graceful_degradation_without_database(self):
         """Test that all cogs operate fully in-memory when async_session is None."""
