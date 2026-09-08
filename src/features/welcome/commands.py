@@ -53,29 +53,21 @@ class Welcome(commands.Cog):
         else:
             await interaction.followup.send(message, ephemeral=True)
 
-    def get_welcome_channel(self, guild: discord.Guild) -> discord.TextChannel | None:
-        """Find the welcome channel for a guild, checking custom config first then fallbacks."""
-        # 1. Custom configured channel
+    def get_welcome_channel(self, guild: discord.Guild | None) -> discord.TextChannel | None:
+        """Find the welcome channel for a guild only if explicitly configured (opt-in)."""
+        if not guild:
+            return None
+
         channel_id = self.welcome_channels.get(guild.id)
-        if channel_id:
+        if not channel_id:
+            return None
+
+        try:
             channel = guild.get_channel(channel_id)
             if isinstance(channel, discord.TextChannel):
                 return channel
-
-        # 2. Guild system channel (default in Discord)
-        if guild.system_channel:
-            return guild.system_channel
-
-        # 3. Search for a channel with "welcome", "joins", or "general" in its name
-        for channel in guild.text_channels:
-            name = channel.name.lower()
-            if any(keyword in name for keyword in ("welcome", "join", "general")):
-                return channel
-
-        # 4. Fallback to the first text channel where the bot can send messages
-        for channel in guild.text_channels:
-            if guild.me and channel.permissions_for(guild.me).send_messages:
-                return channel
+        except Exception:
+            return None
 
         return None
 
