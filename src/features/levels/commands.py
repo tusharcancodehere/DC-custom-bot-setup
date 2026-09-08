@@ -156,7 +156,7 @@ class Levels(commands.Cog):
             return
 
         if not async_session:
-            await interaction.response.send_message("Database is not configured.", ephemeral=True)
+            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         target = user or interaction.user
@@ -186,7 +186,7 @@ class Levels(commands.Cog):
             return
 
         if not async_session:
-            await interaction.response.send_message("Database is not configured.", ephemeral=True)
+            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         async with async_session() as session:
@@ -238,7 +238,7 @@ class Levels(commands.Cog):
             return
 
         if not async_session:
-            await interaction.response.send_message("Database is not configured.", ephemeral=True)
+            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         target = user or interaction.user
@@ -279,7 +279,7 @@ class Levels(commands.Cog):
             return
 
         if not async_session:
-            await interaction.response.send_message("Database is not configured.", ephemeral=True)
+            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         if amount <= 0:
@@ -312,7 +312,7 @@ class Levels(commands.Cog):
             return
 
         if not async_session:
-            await interaction.response.send_message("Database is not configured.", ephemeral=True)
+            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         if amount <= 0:
@@ -345,7 +345,7 @@ class Levels(commands.Cog):
             return
 
         if not async_session:
-            await interaction.response.send_message("Database is not configured.", ephemeral=True)
+            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         if amount < 0:

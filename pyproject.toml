@@ -1,12 +1,12 @@
 [project]
 name = "dc-custom-bot-setup"
 version = "0.1.0"
-description = "Add your description here"
+description = "A modular, hosting-friendly Discord bot built with discord.py"
 readme = "README.md"
 authors = [
     { name = "tushar", email = "thetusharverma2505@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.14.3",
     "alembic>=1.19.1",
@@ -21,11 +21,10 @@ dependencies = [
     "python-dotenv>=1.2.3",
     "sqlalchemy>=2.0.52",
     "yt-dlp[default]>=2026.8.19",
+    "yt-dlp-ejs>=0.8.0",
 ]
-
-[project.scripts]
-dc-custom-bot-setup = "dc_custom_bot_setup:main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
+

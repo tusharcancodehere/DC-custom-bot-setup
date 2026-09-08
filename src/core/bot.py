@@ -1,17 +1,17 @@
 import logging
 import os
+import sys
+from pathlib import Path
 
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 
-from database.database import init_db
+from core.config import load_environment
+from database.database import close_db, init_db
 
-load_dotenv(".env.local")
-load_dotenv(".env")
+load_environment()
 
 COMMAND_PREFIX = "!"
-LOG_FILE = "logs/bot.log"
 LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 EXTENSIONS = [
     "features.welcome.commands",
@@ -29,7 +29,16 @@ if not discord.opus.is_loaded():
     except Exception:
         pass
 
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format=LOG_FORMAT)
+# Hosting-friendly logging: stdout by default, optional file logging
+handlers = [logging.StreamHandler(sys.stdout)]
+try:
+    log_dir = Path("logs")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    handlers.append(logging.FileHandler(log_dir / "bot.log"))
+except Exception as log_error:
+    print(f"File logging unavailable: {log_error}")
+
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, handlers=handlers)
 
 class CustomBot(commands.Bot):
     def __init__(self):
@@ -48,11 +57,8 @@ class CustomBot(commands.Bot):
         await self.close()
 
     async def setup_hook(self):
-        try:
-            await init_db()
-        except Exception as error:
-            logging.error(f"Database initialization error: {error}")
-
+        await init_db()
+        print("Loading features...")
         logging.info("Loading features...")
         for extension in EXTENSIONS:
             await self.load_extension(extension)
@@ -60,16 +66,26 @@ class CustomBot(commands.Bot):
 
     async def on_ready(self):
         if not self._synced:
-            local_commands = [cmd.name for cmd in self.tree.get_commands()]
-            logging.info(f"Local commands before sync ({len(local_commands)}): {', '.join(local_commands)}")
-            print(f"Local commands before sync ({len(local_commands)}): {', '.join(local_commands)}")
+            commands = self.tree.get_commands()
+            cmd_names = ", ".join(cmd.name for cmd in commands)
+            logging.info(f"Loaded commands: {cmd_names}")
+            print(f"Loaded commands: {cmd_names}")
             synced = await self.tree.sync()
             self._synced = True
-            synced_names = [cmd.name for cmd in synced]
-            logging.info(f"Global sync result names: {', '.join(synced_names)}")
-            print(f"Global sync result names: {', '.join(synced_names)}")
             logging.info(f"Globally synced {len(synced)} commands")
             print(f"Globally synced {len(synced)} commands")
 
         logging.info(f"Logged in as {self.user}")
         print(f"Logged in as {self.user}")
+        logging.info("Bot is ready.")
+        print("Bot is ready.")
+
+    async def close(self):
+        logging.info("Shutting down bot...")
+        for voice_client in self.voice_clients:
+            try:
+                await voice_client.disconnect(force=True)
+            except Exception:
+                pass
+        await close_db()
+        await super().close()

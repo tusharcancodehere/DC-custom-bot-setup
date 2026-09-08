@@ -1,13 +1,16 @@
 import asyncio
 import os
+from pathlib import Path
 import random
+import shutil
 
 import discord
 import yt_dlp
 from discord import app_commands
 from discord.ext import commands
 
-CACHE_DIR = os.path.abspath("src/features/music/cache")
+CACHE_DIR = Path(__file__).parent / "cache"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_VOLUME = 1.0
 MIN_VOLUME = 0
 MAX_VOLUME = 100
@@ -325,6 +328,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="play", description="Play a song")
     async def play_command(self, interaction: discord.Interaction, query: str):
+        if not shutil.which("ffmpeg"):
+            await interaction.response.send_message("❌ FFmpeg was not found on PATH. Music commands cannot play audio.", ephemeral=True)
+            return
+
         voice = await self.ensure_voice(interaction)
         if not voice:
             return
@@ -358,6 +365,10 @@ class Music(commands.Cog):
 
     @app_commands.command(name="random", description="Play a random music track from the internet")
     async def random_command(self, interaction: discord.Interaction):
+        if not shutil.which("ffmpeg"):
+            await interaction.response.send_message("❌ FFmpeg was not found on PATH. Music commands cannot play audio.", ephemeral=True)
+            return
+
         voice = await self.ensure_voice(interaction)
         if not voice:
             return

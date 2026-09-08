@@ -1,3 +1,4 @@
+import logging
 import os
 
 import discord
@@ -37,6 +38,7 @@ class AI(commands.Cog):
 
         try:
             if not self.openai:
+                logging.info("OpenAI is not configured. Trying Gemini...")
                 raise RuntimeError
 
             response = await self.openai.responses.create(model=OPENAI_MODEL, instructions=SYSTEM_PROMPT, input=self.conversations[key])

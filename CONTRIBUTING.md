@@ -22,7 +22,7 @@ DC-custom-bot-setup/
 │   ├── main.py              # Application entrypoint
 │   ├── core/                # Core bot framework and shared services
 │   │   ├── bot.py           # CustomBot class, bot lifecycle, command sync
-│   │   ├── config.py        # Configuration management
+│   │   ├── config.py        # Configuration management & validation
 │   │   ├── errors.py        # Custom exceptions and error handlers
 │   │   ├── loader.py        # Dynamic feature/cog loader
 │   │   ├── logging.py       # Centralized application logging
@@ -32,23 +32,28 @@ DC-custom-bot-setup/
 │   │   ├── ai/              # AI conversation commands (/ask, /clear)
 │   │   ├── games/           # Mini-games and entertainment (planned)
 │   │   ├── general/         # General utility commands (/ping)
-│   │   ├── levels/          # XP tracking and rank cards (/level, /show_xp)
-│   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, etc.)
+│   │   ├── levels/          # XP tracking and rank cards (/level, /rank, /show_xp, etc.)
+│   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, /purge, /warn)
 │   │   ├── music/           # Voice and music playback (yt-dlp + FFmpeg)
 │   │   ├── tickets/         # Support ticket system (planned)
 │   │   └── welcome/         # Join/leave messages and embeds (/welcome)
 │   ├── views/               # Shared Discord UI components (buttons, modals)
 │   │   └── common.py
-│   └── database/            # Database engine and connection utilities
-│       └── database.py
-├── alembic/                 # Database schema migrations (planned)
+│   └── database/            # Database engine and models
+│       ├── database.py      # Async engine and session factory
+│       └── models.py        # SQLAlchemy UserXP model
+├── alembic/                 # Database schema migrations
+│   ├── versions/            # Migration version scripts
+│   └── env.py               # Async migration runner
 ├── docs/                    # Extended documentation guides
 │   └── database.md          # PostgreSQL and database guide
-├── scripts/                 # Maintenance and utility scripts
-├── tests/                   # Automated test suite
+├── requirements.txt         # Pip dependency requirements for standard hosting
+├── Dockerfile               # Production container definition
+├── .dockerignore            # Container exclusion rules
 ├── .env.example             # Template for required environment variables
 ├── pyproject.toml           # Project dependencies and tool configuration
 ├── uv.lock                  # Pinned dependency lockfile
+├── TODO.md                  # Project roadmap and completed tasks
 └── README.md                # Project overview
 ```
 
@@ -57,6 +62,7 @@ DC-custom-bot-setup/
 * **Keep Cogs focused**: Feature Cogs (`commands.py`) handle Discord interactions (slash commands, buttons, listeners) and delegate business logic to clean helper functions.
 * **Avoid unnecessary abstractions**: Prefer straightforward, readable Python over clever Python. Do not introduce complex multi-layer abstractions (factories, unit of work, repository patterns) unless the codebase genuinely demands them.
 * **Keep features independent**: Features should remain decoupled from one another. Shared functionality belongs in `src/core/` or `src/views/`.
+* **Graceful degradation**: Features that interact with external services (database, AI APIs, voice) should fail safely and inform the user with friendly messages rather than crashing the bot.
 
 ---
 
@@ -66,11 +72,11 @@ DC-custom-bot-setup/
 
 Ensure you have the following installed on your machine:
 
-* **Python 3.13+**
-* [**uv**](https://docs.astral.sh/uv/) (Python package and project manager)
+* **Python >= 3.11** (Python 3.13 recommended)
+* [**uv**](https://docs.astral.sh/uv/) (recommended) or standard `pip`
 * [**FFmpeg**](https://ffmpeg.org/) (required for voice and music features)
 * **Git**
-* **PostgreSQL** (optional; required only if developing database persistence features)
+* **PostgreSQL** (optional; required only if developing or testing database persistence features)
 
 ### Step 1: Clone the Repository
 
@@ -83,10 +89,16 @@ cd DC-custom-bot-setup
 
 ### Step 2: Install Dependencies
 
-Synchronize the virtual environment and install all dependencies using `uv`:
-
+#### Option A: Using `uv` (Recommended)
 ```bash
 uv sync
+```
+
+#### Option B: Using standard Python `venv` and `pip`
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
 ### Step 3: Configure Environment Variables
@@ -101,20 +113,38 @@ Open `.env` and fill in your development credentials:
 
 * `DISCORD_TOKEN`: Your bot token from the [Discord Developer Portal](https://discord.com/developers/applications).
 * `APPLICATION_ID`: Your Discord application/client ID.
-* `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, the bot runs with in-memory state. See [docs/database.md](docs/database.md) for details.
+* `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, the bot runs without database persistence. See [docs/database.md](docs/database.md) for details.
 * `OPENAI_API_KEY`: (Optional) OpenAI API key for testing AI commands.
 * `GEMINI_API_KEY`: (Optional) Google Gemini API key for testing AI fallback.
 
 > [!WARNING]
 > Never commit your `.env` file or credentials to Git.
 
-### Step 4: Run the Bot
+### Step 4: Apply Database Migrations (Optional)
+
+If you configured `DATABASE_URL` for persistent leveling:
+
+* Using `uv`:
+  ```bash
+  uv run alembic upgrade head
+  ```
+* Using standard Python:
+  ```bash
+  alembic upgrade head
+  ```
+
+### Step 5: Run the Bot
 
 Start the bot locally:
 
-```bash
-uv run python src/main.py
-```
+* Using `uv`:
+  ```bash
+  uv run python src/main.py
+  ```
+* Using standard Python:
+  ```bash
+  python src/main.py
+  ```
 
 ---
 
@@ -157,9 +187,14 @@ To ensure the codebase remains readable, beginner-friendly, and maintainable, pl
 
 Before opening a pull request, verify that all Python source files compile cleanly without syntax errors:
 
-```bash
-uv run python -m compileall -q src
-```
+* Using `uv`:
+  ```bash
+  uv run python -m compileall -q src
+  ```
+* Using standard Python:
+  ```bash
+  python -m compileall -q src
+  ```
 
 Ensure that:
 * Code compiles cleanly without errors.
@@ -197,7 +232,7 @@ Common types:
 When your changes are ready, open a Pull Request (PR):
 
 1. **Pre-PR Checklist**:
-   - [ ] Code compiles cleanly: `uv run python -m compileall -q src`
+   - [ ] Code compiles cleanly: `uv run python -m compileall -q src` or `python -m compileall -q src`
    - [ ] No secrets or `.env` files are tracked in Git.
    - [ ] Documentation is updated if commands or configurations changed.
 2. **Open the PR**:

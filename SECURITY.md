@@ -25,7 +25,7 @@ If you discover a security vulnerability in this project, please report it respo
 
 ### How to Report Privately
 
-1. **GitHub Security Advisories (Preferred)**: Navigate to the repository's **Security** tab, select **Advisories**, and click **Report a vulnerability**.
+1. **GitHub Security Advisories (Preferred)**: Navigate to the [GitHub Security Advisories](https://github.com/tusharcancodehere/DC-custom-bot-setup/security/advisories) tab and click **Report a vulnerability**.
 2. **Email**: If private vulnerability reporting is unavailable, email the maintainer directly at [thetusharverma2505@gmail.com](mailto:thetusharverma2505@gmail.com) with the subject `[SECURITY] DC Custom Bot Vulnerability Report`.
 
 ### What to Include in Your Report
@@ -33,7 +33,7 @@ If you discover a security vulnerability in this project, please report it respo
 To help us investigate and resolve the issue quickly, please include:
 
 * A clear description of the vulnerability and its potential security impact.
-* The specific file, feature, or command affected (e.g., `src/features/moderation/commands.py`).
+* The specific file, feature, or command affected (e.g., [`src/features/moderation/commands.py`](src/features/moderation/commands.py)).
 * Step-by-step reproduction instructions or a minimal proof of concept.
 * Any proposed mitigations or fixes, if available.
 
@@ -49,8 +49,8 @@ To help us investigate and resolve the issue quickly, please include:
 ### 1. Keeping Secrets Out of Git
 
 * **Never commit secrets to version control.** This includes Discord bot tokens, database connection strings (`DATABASE_URL`), OpenAI API keys, Google Gemini API keys, and webhook URLs.
-* Ensure `.env` is listed in `.gitignore` and never staged for commit.
-* Use `.env.example` as a template containing placeholder values only.
+* Ensure `.env` is listed in [`.gitignore`](.gitignore) and never staged for commit.
+* Use [`.env.example`](.env.example) as a template containing placeholder values only.
 * If a secret is accidentally committed to Git:
   1. Revoke and rotate the exposed token, password, or API key immediately.
   2. Treat any compromised credential as publicly exposed regardless of whether the commit is subsequently removed from Git history.
@@ -63,7 +63,7 @@ To help us investigate and resolve the issue quickly, please include:
 
 ### 3. Database Security & Credentials
 
-* **Connection Strings**: `DATABASE_URL` contains database credentials. Never hardcode fallback credentials or database passwords directly in Python code or configuration defaults.
+* **Connection Strings**: `DATABASE_URL` contains database credentials. Never hardcode fallback credentials or database passwords directly in Python code or configuration defaults. See [docs/database.md](docs/database.md) for details.
 * **Network Isolation**: In production, bind PostgreSQL to local loopback (`127.0.0.1`) or private container networks; avoid exposing PostgreSQL port `5432` to the public internet without SSL and strict firewall rules.
 * **SQL Injection Prevention**: Always use SQLAlchemy ORM or parameterized queries via `asyncpg`. Never concatenate raw user input strings directly into SQL statements.
 
@@ -82,6 +82,7 @@ To help us investigate and resolve the issue quickly, please include:
 
 ### 6. Dependency Management
 
-* Manage dependencies using `uv` with reproducible locks in `uv.lock`.
+* Manage dependencies using [**uv**](https://docs.astral.sh/uv/) with reproducible locks in [`uv.lock`](uv.lock) or standard dependencies in [`requirements.txt`](requirements.txt).
 * Regularly audit and update project dependencies to resolve known vulnerabilities in upstream packages (`discord.py`, `aiohttp`, `cryptography`, etc.).
 * Review new dependencies carefully before adding them to avoid unmaintained or insecure third-party code.
+
