@@ -48,9 +48,9 @@ Server activity and XP system designed for clean multi-server operation:
 
 ### 🤖 AI Assistant
 Conversational AI powered by dual providers with automated fallback:
-* `/ask` — Send prompts and questions to the AI assistant. Queries OpenAI (`gpt-5-mini`) as the primary provider, automatically falling back to Google Gemini (`gemini-2.5-flash`) if OpenAI is unavailable.
+* `/ask` — Send prompts and questions to the AI assistant. Queries OpenAI (`gpt-5-mini`) as the primary provider with chat completions fallback, automatically falling back to Google Gemini (`gemini-2.5-flash`) via an asynchronous worker thread if OpenAI is unavailable.
 * `/clear` — Reset your personal in-memory conversation history in the current server.
-* **Context & Formatting**: Maintains per-user in-memory conversation history, instructs models to provide concise and direct responses, and handles Discord message length limits.
+* **Context & Formatting**: Maintains per-server, per-user in-memory conversation history with token bounding, instructs models to provide concise and direct responses, and safely splits long responses across Discord message length limits (>1900 chars).
 
 ### 👋 Welcome System
 Server greeting and onboarding announcements:

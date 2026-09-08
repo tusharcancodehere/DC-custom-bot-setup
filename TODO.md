@@ -66,11 +66,13 @@ This document is the source of truth for project progress, tracking implemented 
 ### AI Assistant
 * [x] Conversational AI command (`/ask`)
 * [x] Reset personal conversation history (`/clear`)
-* [x] Primary AI provider: OpenAI (`gpt-5-mini`)
-* [x] Automatic fallback provider: Google Gemini (`gemini-2.5-flash`)
-* [x] Per-user in-memory conversation history
+* [x] Primary AI provider: OpenAI (`gpt-5-mini` with chat completions fallback)
+* [x] Automatic fallback provider: Google Gemini (`gemini-2.5-flash` via thread pool)
+* [x] Multi-turn conversation retention with history bounding
+* [x] Safe message chunking for long responses (>1900 chars)
+* [x] Strict `(guild_id, user_id)` conversation isolation
 * [x] Concise and direct system instructions
-* [x] Safe error messaging when API keys are unconfigured
+* [x] Safe error messaging and unfulfilled prompt rollback when providers fail
 
 ---
 
