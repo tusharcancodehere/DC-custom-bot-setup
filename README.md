@@ -37,7 +37,9 @@ Member and message moderation commands equipped with permission checks, role hie
 Server and bot administrative tools (kept strictly separate from member punishments):
 * `/serverinfo` — View comprehensive administrative details about the current server (Members, Channels, Roles, Owner, Creation date).
 * `/botinfo` — View bot runtime statistics, connected servers count, latency, and system status.
-* `/server_settings` — View current administrative settings and bot configuration for the guild.
+* `/server_settings` — View current administrative settings and bot configuration for the guild (Rules channel, System channel, Welcome channel, Mod Log channel).
+* `/set_modlog_channel` — Designate or view the text channel where moderation actions and disciplinary records are automatically logged.
+* `/announce` — Post a formatted, official announcement embed to a designated server channel with staff attribution.
 * **Access Control**: Enforces `manage_guild` permissions with clear, friendly error feedback.
 
 ### 🆙 Level System

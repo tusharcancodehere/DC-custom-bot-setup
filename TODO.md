@@ -28,7 +28,9 @@ This document is the source of truth for project progress, tracking implemented 
 ### Administration
 * [x] Server administrative overview command (`/serverinfo`)
 * [x] Bot administrative status command (`/botinfo`)
-* [x] Server configuration settings command (`/server_settings`)
+* [x] Server configuration settings overview command (`/server_settings`)
+* [x] Moderation log channel configuration command (`/set_modlog_channel`)
+* [x] Official server announcement command (`/announce`)
 * [x] Administrative permission checks (`manage_guild`)
 
 ### Moderation
@@ -107,7 +109,6 @@ This document is the source of truth for project progress, tracking implemented 
 * [ ] Moderation case log model (case IDs, infraction history, timestamps)
 
 ### Advanced Moderation
-* [ ] Dedicated moderation log channel
 * [ ] Automated spam and invite link filtering
 
 ### Advanced Welcome

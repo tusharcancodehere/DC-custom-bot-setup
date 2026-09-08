@@ -14,21 +14,29 @@ class Admin(commands.Cog):
     """
     def __init__(self, bot):
         self.bot = bot
+        # In-memory mapping of guild_id -> channel_id for moderation logs
+        self.modlog_channels: dict[int, int] = {}
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         """Handle missing permissions gracefully with a friendly message."""
         if isinstance(error, app_commands.MissingPermissions):
             message = "❌ You need the **Manage Server** or **Administrator** permission to use this command."
-            if not interaction.response.is_done():
-                await interaction.response.send_message(message, ephemeral=True)
-            else:
-                await interaction.followup.send(message, ephemeral=True)
         else:
             message = f"❌ An error occurred: `{error}`"
-            if not interaction.response.is_done():
-                await interaction.response.send_message(message, ephemeral=True)
-            else:
-                await interaction.followup.send(message, ephemeral=True)
+
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.followup.send(message, ephemeral=True)
+
+    def get_modlog_channel(self, guild: discord.Guild) -> discord.TextChannel | None:
+        """Get the configured moderation log channel for a guild."""
+        channel_id = self.modlog_channels.get(guild.id)
+        if channel_id:
+            channel = guild.get_channel(channel_id)
+            if isinstance(channel, discord.TextChannel):
+                return channel
+        return None
 
     @app_commands.command(name="serverinfo", description="View administrative details about the server")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -93,14 +101,51 @@ class Admin(commands.Cog):
         embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed)
 
+    @app_commands.command(name="set_modlog_channel", description="Set or view the moderation log channel")
+    @app_commands.describe(channel="The channel for moderation logs (leave empty to view current)")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def set_modlog_channel(self, interaction: discord.Interaction, channel: discord.TextChannel | None = None):
+        """Set or view the channel where moderation actions are logged."""
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        if channel is None:
+            current = self.get_modlog_channel(interaction.guild)
+            if current:
+                await interaction.response.send_message(f"📋 Moderation logs are currently sent to {current.mention}.")
+            else:
+                await interaction.response.send_message("📋 No moderation log channel is currently configured.")
+            return
+
+        self.modlog_channels[interaction.guild.id] = channel.id
+        await interaction.response.send_message(f"✅ Moderation log channel set to {channel.mention}.")
+
+    @app_commands.command(name="announce", description="Post a formatted announcement embed to a channel")
+    @app_commands.describe(channel="Target channel for announcement", message="Announcement message text", title="Optional announcement title")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def announce_command(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str, title: str = "📢 Server Announcement"):
+        """Post a formatted server announcement to a designated channel."""
+        if not interaction.guild:
+            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            return
+
+        embed = discord.Embed(title=title, description=message, color=ADMIN_COLOR)
+        embed.timestamp = discord.utils.utcnow()
+        if interaction.guild.icon:
+            embed.set_thumbnail(url=interaction.guild.icon.url)
+        embed.set_footer(text=f"Posted by {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
+
+        try:
+            await channel.send(embed=embed)
+            await interaction.response.send_message(f"✅ Announcement posted in {channel.mention}.", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message(f"❌ I lack permission to send messages in {channel.mention}.", ephemeral=True)
+
     @app_commands.command(name="server_settings", description="View current administrative server settings")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def server_settings_command(self, interaction: discord.Interaction):
-        """Display current server configuration settings.
-        
-        This command acts as the central hub for server configuration and can be
-        expanded in the future for configurable welcome channels, logs, and roles.
-        """
+        """Display current server configuration settings."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
@@ -114,15 +159,19 @@ class Admin(commands.Cog):
         welcome_ch = welcome_cog.get_welcome_channel(guild) if welcome_cog else None
         welcome_channel = welcome_ch.mention if welcome_ch else "*None*"
 
+        modlog_ch = self.get_modlog_channel(guild)
+        modlog_channel = modlog_ch.mention if modlog_ch else "*None*"
+
         embed = discord.Embed(title=f"⚙️ Administrative Settings: {guild.name}", color=ADMIN_COLOR)
         embed.add_field(name="🛡️ Verification Level", value=f"`{verification}`", inline=True)
         embed.add_field(name="📜 Rules Channel", value=rules_channel, inline=True)
         embed.add_field(name="📢 System Channel", value=system_channel, inline=True)
         embed.add_field(name="👋 Welcome Channel", value=welcome_channel, inline=True)
+        embed.add_field(name="📋 Mod Log Channel", value=modlog_channel, inline=True)
         embed.add_field(name="🤖 Bot Role", value=guild.me.top_role.mention, inline=True)
         embed.add_field(
             name="💡 Administration Note",
-            value="Configure channels using `/set_welcome_channel` and related commands.",
+            value="Configure channels using `/set_welcome_channel` and `/set_modlog_channel`.",
             inline=False,
         )
 
