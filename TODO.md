@@ -95,6 +95,14 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] 24/7 continuous voice connection mode (`/247`)
 * [x] Automatic audio cache cleanup
 
+### Support Tickets
+* [x] Interactive ticket launch panel (`/ticket_panel`)
+* [x] Persistent "Create Ticket" button view (`TicketLaunchView`)
+* [x] Automated private support channel creation with permission overwrites
+* [x] Duplicate ticket prevention per user per server
+* [x] In-channel ticket controls (`TicketControlView` with Close & Delete)
+* [x] Staff slash commands (`/ticket_close`, `/ticket_delete`)
+
 ---
 
 ## Planned Work
@@ -112,12 +120,6 @@ This document is the source of truth for project progress, tracking implemented 
 ### Advanced Welcome
 * [ ] Auto-role assignment for new members
 * [ ] Dynamic banner image generation
-
-### Support Tickets
-* [ ] Ticket creation panel and buttons
-* [ ] Private ticket channel management
-* [ ] Ticket claim and close workflows
-* [ ] Transcript generation and logging
 
 ### Mini-Games
 * [ ] Coin flip command
