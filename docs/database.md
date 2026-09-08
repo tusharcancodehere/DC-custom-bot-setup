@@ -23,7 +23,7 @@ DC Custom Bot uses an asynchronous database stack built around PostgreSQL and SQ
 ## 2. Architecture & Graceful Degradation
 
 ### Persistence & Automatic Fallback
-The database persistently tracks member experience (`xp`), current level (`level`), timestamps (`last_xp`), server configurations (`guild_config`), and moderation audit logs (`moderation_cases`).
+The database persistently tracks member experience (`xp`), current level (`level`), timestamps (`last_xp`), server configurations (`guild_config` including welcome/leave toggles and level-up announcement settings), and moderation audit logs (`moderation_cases`).
 
 * **PostgreSQL (Preferred for Production)**: When `DATABASE_URL` is set, the bot connects to PostgreSQL via `asyncpg`.
 * **Automatic SQLite Fallback**: When `DATABASE_URL` is omitted or empty, the bot automatically initializes a local SQLite database at `sqlite+aiosqlite:///data/bot.db`. No manual database configuration is required.
@@ -60,6 +60,9 @@ Stores server-specific configuration options:
 | `guild_id` | `BigInteger` | Primary Key | Discord server ID |
 | `welcome_channel_id` | `BigInteger` | Nullable | Configured welcome channel ID |
 | `modlog_channel_id` | `BigInteger` | Nullable | Configured moderation log channel ID |
+| `welcome_enabled` | `Boolean` | Default: `True`, Not Null | Whether automatic welcome announcements are enabled |
+| `leave_enabled` | `Boolean` | Default: `True`, Not Null | Whether automatic member departure notifications are enabled |
+| `levelup_enabled` | `Boolean` | Default: `False`, Not Null | Whether level-up celebration announcements are enabled |
 | `updated_at` | `DateTime(timezone=True)` | Default: `now()`, Not Null | Last configuration update timestamp |
 
 ---

@@ -63,10 +63,11 @@ To help us investigate and resolve the issue quickly, please include:
 
 ### 3. Database Security & Credentials
 
-If configuring the optional `DATABASE_URL` for persistent storage:
-* **Connection Strings**: `DATABASE_URL` contains database credentials. Never hardcode fallback credentials or database passwords directly in Python code or configuration defaults. See [docs/database.md](docs/database.md) for details.
+For persistent storage configurations:
+* **Connection Strings**: `DATABASE_URL` contains database credentials when connecting to PostgreSQL. Never hardcode fallback credentials or database passwords directly in Python code or configuration defaults. See [docs/database.md](docs/database.md) for details.
+* **SQLite Storage**: When using the automatic local SQLite fallback (`data/bot.db`), ensure the host system protects the `data/` directory with restricted filesystem permissions so unauthorized users cannot access the database file.
 * **Network Isolation**: When using PostgreSQL, bind it to local loopback (`127.0.0.1`) or private container networks; avoid exposing PostgreSQL port `5432` to the public internet without SSL and strict firewall rules.
-* **SQL Injection Prevention**: Always use SQLAlchemy ORM or parameterized queries via `asyncpg`. Never concatenate raw user input strings directly into SQL statements.
+* **SQL Injection Prevention**: Always use SQLAlchemy ORM or parameterized queries via `asyncpg` or `aiosqlite`. Never concatenate raw user input strings directly into SQL statements.
 
 ### 4. Discord Permissions and Gateway Intents
 

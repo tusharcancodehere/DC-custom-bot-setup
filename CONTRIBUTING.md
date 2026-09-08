@@ -36,10 +36,10 @@ DC-custom-bot-setup/
 │   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, /purge, /warn, /lock, /unlock, /slowmode)
 │   │   ├── music/           # Music streaming and playback (/play, /player, /queue, etc.)
 │   │   ├── tickets/         # Support ticket system (/ticket_panel, /ticket_close, /ticket_delete)
-│   │   └── welcome/         # Welcome embed templates (/welcome, /set_welcome_channel)
+│   │   └── welcome/         # Welcome embed templates (/welcome, /set_welcome_channel, /toggle_welcome, /toggle_leave)
 │   ├── views/               # Shared Discord UI components (buttons, modals)
 │   │   └── common.py
-│   └── database/            # Database engine and models (PostgreSQL persistence)
+│   └── database/            # Database engine and models (PostgreSQL & SQLite fallback persistence)
 │       ├── database.py      # Async engine and session factory
 │       └── models.py        # SQLAlchemy models
 ├── alembic/                 # Database schema migrations
@@ -80,7 +80,7 @@ Ensure you have the following installed on your machine:
 * [**uv**](https://docs.astral.sh/uv/) (recommended) or standard `pip`
 * [**FFmpeg**](https://ffmpeg.org/) (required for voice and music features)
 * **Git**
-* **PostgreSQL** (optional; required only if developing or testing database persistence features)
+* **Database (PostgreSQL or SQLite)**: Persistent storage works out of the box with zero-config local SQLite (`sqlite+aiosqlite:///data/bot.db`). PostgreSQL (`>= 15`) is optional for production deployments.
 
 ### Step 1: Clone the Repository
 
@@ -118,7 +118,7 @@ Open `.env` and fill in your development credentials (see the beginner-friendly 
 * `DISCORD_TOKEN`: Your bot token from the [Discord Developer Portal](https://discord.com/developers/applications).
 * `APPLICATION_ID`: Your Discord application/client ID from the [Discord Developer Portal](https://discord.com/developers/applications).
 * **Privileged Gateway Intents**: Ensure both **Server Members Intent** and **Message Content Intent** are toggled **ON** in the Developer Portal (under **Bot** -> **Privileged Gateway Intents**).
-* `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, the bot runs without database persistence. See [docs/database.md](docs/database.md) for details.
+* `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted or empty, the bot automatically uses a local SQLite database (`sqlite+aiosqlite:///data/bot.db`). See [docs/database.md](docs/database.md) for details.
 * `OPENAI_API_KEY`: (Optional) OpenAI API key for testing AI commands.
 * `GEMINI_API_KEY`: (Optional) Google Gemini API key for testing AI fallback.
 
@@ -139,7 +139,7 @@ Start the bot locally:
   ```
 
 > [!NOTE]
-> Database persistence is optional. If you are running the bot with `DATABASE_URL` configured, apply schema migrations using `uv run alembic upgrade head` or `alembic upgrade head`.
+> Database persistence works out of the box with SQLite. If you are using PostgreSQL or making model changes, apply schema migrations using `uv run alembic upgrade head` or `alembic upgrade head`.
 
 ---
 
@@ -180,19 +180,18 @@ To ensure the codebase remains readable, beginner-friendly, and maintainable, pl
 
 ## Verification & Testing
 
-Before opening a pull request, verify that all Python source files compile cleanly without syntax errors:
+Before opening a pull request, verify that all Python source files compile cleanly without syntax errors and that the automated test suite passes:
 
-* Using `uv`:
-  ```bash
-  uv run python -m compileall -q src
-  ```
-* Using standard Python:
-  ```bash
-  python -m compileall -q src
-  ```
+* **Compile check**:
+  * Using `uv`: `uv run python -m compileall -q src alembic tests`
+  * Using standard Python: `python -m compileall -q src alembic tests`
+* **Run test suite**:
+  * Using `uv`: `uv run python -m unittest discover -s tests -v`
+  * Using standard Python: `python -m unittest discover -s tests -v`
 
 Ensure that:
 * Code compiles cleanly without errors.
+* All automated unit tests pass.
 * No temporary files, credentials, or `.env` files are tracked in Git.
 * Slash commands and interactive views function as expected in your test Discord server.
 
@@ -228,7 +227,8 @@ When your changes are ready, open a Pull Request (PR):
 
 1. **Keep PRs Focused**: Keep pull requests small and focused on a single feature, bug fix, or improvement. Avoid large PRs that bundle multiple unrelated changes together.
 2. **Pre-PR Checklist**:
-   - [ ] Code compiles cleanly: `uv run python -m compileall -q src` or `python -m compileall -q src`
+   - [ ] Code compiles cleanly: `uv run python -m compileall -q src alembic tests`
+   - [ ] All unit tests pass: `uv run python -m unittest discover -s tests -v`
    - [ ] No secrets or `.env` files are tracked in Git.
    - [ ] Documentation is updated if commands or configurations changed.
 3. **Open the PR**:

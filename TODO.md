@@ -120,7 +120,7 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Automatic SQLite fallback (`sqlite+aiosqlite:///data/bot.db`) when `DATABASE_URL` is unset/empty
 * [x] SQLAlchemy 2.0 async session integration in feature Cogs
 * [x] Alembic schema migrations workflow for PostgreSQL and SQLite ([`alembic/versions/`](alembic/versions/))
-* [x] Guild configuration model (`GuildConfig` with custom welcome, mod-log channels, and level-up announcements)
+* [x] Guild configuration model (`GuildConfig` with custom welcome, mod-log channels, welcome/leave toggles, and level-up announcements)
 * [x] Moderation case log model (`ModerationCase` with infraction history, actions, reasons, and timestamps)
 * [x] User experience model (`UserXP` with per-server isolation and rank tracking)
 * [x] Comprehensive database and graceful degradation test suite ([`tests/test_database.py`](tests/test_database.py))

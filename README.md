@@ -105,7 +105,7 @@ Relational storage with SQLAlchemy 2.0 async sessions and Alembic schema migrati
 * **PostgreSQL (Production)**: Recommended for production and multi-container deployments via `docker compose`.
 * **Automatic SQLite Fallback**: If `DATABASE_URL` is empty or unset, the bot automatically initializes and uses a local SQLite database (`sqlite+aiosqlite:///data/bot.db`).
 * **Persistent XP & Leveling**: User XP and levels are stored in the database (`user_xp` table) and survive bot restarts.
-* **Server Configurations**: Welcome channel, mod log channel, and opt-in level-up announcement settings are persisted in the database (`guild_config` table).
+* **Server Configurations**: Welcome channel, mod log channel, welcome/leave toggles, and opt-in level-up announcement settings are persisted in the database (`guild_config` table).
 * **Moderation Audit Log**: Member warnings and disciplinary cases are tracked in the database (`moderation_cases` table).
 * **Graceful Degradation**: If both PostgreSQL and SQLite fail to initialize, all features continue functioning seamlessly using in-memory fallbacks.
 * See [docs/database.md](docs/database.md) for architecture, setup options, and schema migrations.
@@ -136,7 +136,7 @@ The following features are planned on our roadmap:
 | **OpenAI SDK** (`>= 3.8.0`) | Primary AI provider for `/ask` | [OpenAI Docs](https://platform.openai.com/docs) |
 | **Google GenAI** (`>= 2.22.0`) | Fallback AI provider for `/ask` | [Google GenAI Docs](https://ai.google.dev/) |
 | **uv** | Fast Python package and project manager | [uv Docs](https://docs.astral.sh/uv/) |
-| **SQLAlchemy / asyncpg / Alembic** | Database dependencies (for planned persistence) | [SQLAlchemy Docs](https://docs.sqlalchemy.org/) |
+| **SQLAlchemy / asyncpg / aiosqlite / Alembic** | Database persistence engine, async drivers, and migrations | [SQLAlchemy Docs](https://docs.sqlalchemy.org/) |
 | **yt-dlp / FFmpeg** | Audio streaming dependencies | [yt-dlp Docs](https://github.com/yt-dlp/yt-dlp) |
 
 ---
@@ -166,10 +166,10 @@ DC-custom-bot-setup/
 │   │   └── welcome/         # Welcome announcements & member events (/welcome, /toggle_welcome, /toggle_leave)
 │   ├── views/               # Shared Discord UI components
 │   │   └── common.py
-│   └── database/            # Database engine and models (for planned persistence)
+│   └── database/            # Database engine and models (PostgreSQL & SQLite fallback)
 │       ├── database.py      # Async engine and session factory
 │       └── models.py        # SQLAlchemy models
-├── alembic/                 # Database schema migrations (planned)
+├── alembic/                 # Database schema migrations
 ├── docs/                    # Architectural and database guides
 │   └── database.md
 ├── requirements.txt         # Standalone pip requirements for standard hosting
@@ -357,7 +357,7 @@ Verify that all Python source files compile cleanly and tests pass:
 
 * **Compile check**:
   ```bash
-  uv run python -m compileall -q src
+  uv run python -m compileall -q src alembic tests
   ```
 * **Run test suite**:
   ```bash
