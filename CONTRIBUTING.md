@@ -27,26 +27,26 @@ DC-custom-bot-setup/
 │   │   ├── loader.py        # Dynamic feature/cog loader
 │   │   ├── logging.py       # Centralized application logging
 │   │   └── permissions.py   # Reusable permission and authorization checks
-│   ├── features/            # Independent, modular bot features
-│   │   ├── admin/           # Server administration commands (planned)
+│   ├── features/            # Modular bot features
+│   │   ├── admin/           # Server administration commands (/serverinfo, /botinfo, /server_settings)
 │   │   ├── ai/              # AI conversation commands (/ask, /clear)
 │   │   ├── games/           # Mini-games and entertainment (planned)
 │   │   ├── general/         # General utility commands (/ping)
-│   │   ├── levels/          # XP tracking and rank cards (/level, /rank, /show_xp, etc.)
+│   │   ├── levels/          # Multi-server level system (/level, /rank, /leaderboard, etc.)
 │   │   ├── moderation/      # Moderation tools (/kick, /ban, /timeout, /purge, /warn)
-│   │   ├── music/           # Voice and music playback (yt-dlp + FFmpeg)
+│   │   ├── music/           # Music streaming (in progress)
 │   │   ├── tickets/         # Support ticket system (planned)
-│   │   └── welcome/         # Join/leave messages and embeds (/welcome)
+│   │   └── welcome/         # Welcome embed templates (/welcome)
 │   ├── views/               # Shared Discord UI components (buttons, modals)
 │   │   └── common.py
-│   └── database/            # Database engine and models
+│   └── database/            # Database engine and models (for planned persistence)
 │       ├── database.py      # Async engine and session factory
-│       └── models.py        # SQLAlchemy UserXP model
-├── alembic/                 # Database schema migrations
+│       └── models.py        # SQLAlchemy models
+├── alembic/                 # Database schema migrations (planned)
 │   ├── versions/            # Migration version scripts
 │   └── env.py               # Async migration runner
 ├── docs/                    # Extended documentation guides
-│   └── database.md          # PostgreSQL and database guide
+│   └── database.md          # Database guide and architectural notes
 ├── requirements.txt         # Pip dependency requirements for standard hosting
 ├── Dockerfile               # Production container definition
 ├── .dockerignore            # Container exclusion rules
@@ -121,20 +121,7 @@ Open `.env` and fill in your development credentials (see the beginner-friendly 
 > [!WARNING]
 > Never commit your `.env` file or credentials to Git.
 
-### Step 4: Apply Database Migrations (Optional)
-
-If you configured `DATABASE_URL` for persistent leveling:
-
-* Using `uv`:
-  ```bash
-  uv run alembic upgrade head
-  ```
-* Using standard Python:
-  ```bash
-  alembic upgrade head
-  ```
-
-### Step 5: Run the Bot
+### Step 4: Run the Bot
 
 Start the bot locally:
 
@@ -146,6 +133,9 @@ Start the bot locally:
   ```bash
   python src/main.py
   ```
+
+> [!NOTE]
+> Database persistence is optional and planned. If you are developing database models with `DATABASE_URL` configured, you can apply schema migrations using `uv run alembic upgrade head` or `alembic upgrade head`.
 
 ---
 
@@ -232,15 +222,16 @@ Common types:
 
 When your changes are ready, open a Pull Request (PR):
 
-1. **Pre-PR Checklist**:
+1. **Keep PRs Focused**: Keep pull requests small and focused on a single feature, bug fix, or improvement. Avoid large PRs that bundle multiple unrelated changes together.
+2. **Pre-PR Checklist**:
    - [ ] Code compiles cleanly: `uv run python -m compileall -q src` or `python -m compileall -q src`
    - [ ] No secrets or `.env` files are tracked in Git.
    - [ ] Documentation is updated if commands or configurations changed.
-2. **Open the PR**:
+3. **Open the PR**:
    * Use a concise, descriptive title matching your commit format.
    * Describe the problem being solved or the feature added.
    * Reference any relevant issue numbers (e.g., `Closes #12`).
-3. **Review**:
+4. **Review**:
    * Maintainers will review your PR and may request adjustments.
    * Address feedback promptly by pushing updates to your branch.
 

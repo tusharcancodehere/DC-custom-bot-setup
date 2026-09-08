@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import json
 from pathlib import Path
 import random
@@ -7,16 +6,13 @@ import time
 import discord
 from discord import app_commands
 from discord.ext import commands
-from sqlalchemy import func, select
-
-from database.database import async_session
-from database.models import UserXP
 
 EMBED_FILE = Path(__file__).parent / "embed.json"
 PRIMARY_COLOR = 0x5865F2
 SUCCESS_COLOR = 0x57F287
 WARNING_COLOR = 0xFEE75C
 ERROR_COLOR = 0xED4245
+
 COOLDOWN_SECONDS = 60
 MIN_MESSAGE_LENGTH = 5
 XP_MIN = 15
@@ -25,11 +21,13 @@ PROGRESS_BAR_LENGTH = 12
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 def xp_for_level(level: int) -> int:
+    """Calculate the minimum total XP required to reach a specific level."""
     if level <= 0:
         return 0
     return int(100 * (level ** 1.5))
 
 def calculate_level(xp: int) -> int:
+    """Calculate the user's level based on their total XP points."""
     if xp < 100:
         return 0
     lvl = int((xp / 100) ** (2 / 3) + 1e-9)
@@ -40,39 +38,52 @@ def calculate_level(xp: int) -> int:
     return lvl
 
 def create_progress_bar(current: int, total: int, length: int = PROGRESS_BAR_LENGTH) -> str:
+    """Create a visual text progress bar for rank cards."""
     if total <= 0:
         return "░" * length
     filled = min(length, max(0, int((current / total) * length)))
     return "█" * filled + "░" * (length - filled)
 
 class Levels(commands.Cog):
+    """Level and XP system with complete per-guild data isolation."""
     def __init__(self, bot):
         self.bot = bot
-        self.cooldowns = {}
+        # Guild-isolated storage: guild_id -> {user_id: {"xp": int, "level": int, "last_xp": float}}
+        # This guarantees that User XP in Server A never affects or leaks into Server B.
+        self.guild_xp: dict[int, dict[int, dict]] = {}
+        # Cooldown tracking: (guild_id, user_id) -> timestamp
+        self.cooldowns: dict[tuple[int, int], float] = {}
+
+        # Load customizable rank card embed structure
         with open(EMBED_FILE, encoding="utf-8") as file:
             self.embed_data = json.load(file)
 
-    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingPermissions):
-            if not interaction.response.is_done():
-                await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
-            else:
-                await interaction.followup.send("❌ You do not have permission to use this command.", ephemeral=True)
-        else:
-            if not interaction.response.is_done():
-                await interaction.response.send_message(f"❌ An error occurred: `{error}`", ephemeral=True)
-            else:
-                await interaction.followup.send(f"❌ An error occurred: `{error}`", ephemeral=True)
+    def get_user_data(self, guild_id: int, user_id: int) -> dict:
+        """Get or initialize user XP record for a specific guild."""
+        if guild_id not in self.guild_xp:
+            self.guild_xp[guild_id] = {}
+        if user_id not in self.guild_xp[guild_id]:
+            self.guild_xp[guild_id][user_id] = {
+                "xp": 0,
+                "level": 0,
+                "last_xp": 0.0,
+            }
+        return self.guild_xp[guild_id][user_id]
 
-    async def get_or_create_user(self, session, guild_id: int, user_id: int) -> UserXP:
-        user_xp = await session.get(UserXP, (guild_id, user_id))
-        if not user_xp:
-            user_xp = UserXP(guild_id=guild_id, user_id=user_id, xp=0, level=0, last_xp=datetime.now(timezone.utc))
-            session.add(user_xp)
-            await session.flush()
-        return user_xp
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        """Handle missing permissions gracefully with a friendly message."""
+        if isinstance(error, app_commands.MissingPermissions):
+            message = "❌ You do not have permission to use this command."
+        else:
+            message = f"❌ An error occurred: `{error}`"
+
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.followup.send(message, ephemeral=True)
 
     def build_level_embed(self, user: discord.Member, guild: discord.Guild, level: int, xp: int, rank: int) -> discord.Embed:
+        """Construct the formatted rank card embed from embed.json."""
         current_base = xp_for_level(level)
         next_base = xp_for_level(level + 1)
         progress_in_level = max(0, xp - current_base)
@@ -108,34 +119,32 @@ class Levels(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        """Award random XP on eligible chat messages with anti-spam cooldowns."""
+        # Ignore bot messages and direct messages
         if message.author.bot or not message.guild:
             return
 
+        # Ignore short messages to prevent spam abuse
         if len(message.content.strip()) < MIN_MESSAGE_LENGTH:
             return
 
-        if not async_session:
-            return
-
+        # Enforce 60-second cooldown per user per guild
         now = time.monotonic()
         key = (message.guild.id, message.author.id)
         if now - self.cooldowns.get(key, 0) < COOLDOWN_SECONDS:
             return
         self.cooldowns[key] = now
 
+        # Fetch isolated record for this guild
+        user_data = self.get_user_data(message.guild.id, message.author.id)
+        old_level = user_data["level"]
         xp_gain = random.randint(XP_MIN, XP_MAX)
-        old_level = 0
-        new_level = 0
+        user_data["xp"] += xp_gain
+        new_level = calculate_level(user_data["xp"])
+        user_data["level"] = new_level
+        user_data["last_xp"] = time.time()
 
-        async with async_session() as session:
-            async with session.begin():
-                user_xp = await self.get_or_create_user(session, message.guild.id, message.author.id)
-                old_level = user_xp.level
-                user_xp.xp += xp_gain
-                new_level = calculate_level(user_xp.xp)
-                user_xp.level = new_level
-                user_xp.last_xp = datetime.now(timezone.utc)
-
+        # Send celebration announcement when reaching a new level
         if new_level > old_level:
             embed = discord.Embed(
                 title="🎉 Level Up!",
@@ -151,57 +160,49 @@ class Levels(commands.Cog):
 
     @app_commands.command(name="level", description="Show the current level and XP of a user")
     async def level_command(self, interaction: discord.Interaction, user: discord.Member | None = None):
+        """Display rank card with level progress and percentage."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
 
-        if not async_session:
-            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
-            return
-
         target = user or interaction.user
-        async with async_session() as session:
-            user_xp = await session.get(UserXP, (interaction.guild.id, target.id))
-            xp = user_xp.xp if user_xp else 0
-            level = user_xp.level if user_xp else 0
+        user_data = self.get_user_data(interaction.guild.id, target.id)
+        xp = user_data["xp"]
+        level = user_data["level"]
 
-            rank_stmt = (
-                select(func.count())
-                .select_from(UserXP)
-                .where(UserXP.guild_id == interaction.guild.id, UserXP.xp > xp)
-            )
-            rank = (await session.scalar(rank_stmt) or 0) + 1
+        # Calculate rank relative only to members in this server
+        guild_users = self.guild_xp.get(interaction.guild.id, {})
+        rank = sum(1 for data in guild_users.values() if data.get("xp", 0) > xp) + 1
 
         embed = self.build_level_embed(target, interaction.guild, level, xp, rank)
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="rank", description="Show the rank of a user within the server")
     async def rank_command(self, interaction: discord.Interaction, user: discord.Member | None = None):
+        """Alias for /level."""
         await self.level_command(interaction, user)
 
     @app_commands.command(name="leaderboard", description="Show the highest-XP members in this server")
     async def leaderboard_command(self, interaction: discord.Interaction):
+        """Display the top 10 most active members in the current server."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
 
-        if not async_session:
-            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
-            return
-
-        async with async_session() as session:
-            stmt = (
-                select(UserXP)
-                .where(UserXP.guild_id == interaction.guild.id)
-                .order_by(UserXP.xp.desc())
-                .limit(10)
-            )
-            rows = (await session.scalars(stmt)).all()
+        guild_users = self.guild_xp.get(interaction.guild.id, {})
+        # Filter and sort only members belonging to this guild
+        active_members = [
+            (uid, data["xp"], data["level"])
+            for uid, data in guild_users.items()
+            if data.get("xp", 0) > 0
+        ]
+        active_members.sort(key=lambda x: x[1], reverse=True)
+        top_10 = active_members[:10]
 
         server_name = interaction.guild.name
         server_icon = interaction.guild.icon.url if interaction.guild.icon else None
 
-        if not rows:
+        if not top_10:
             embed = discord.Embed(
                 title="🏆 Server Leaderboard",
                 description="No experience recorded in this server yet.\n\n*Chat in text channels to earn XP!*",
@@ -209,11 +210,11 @@ class Levels(commands.Cog):
             )
         else:
             lines = ["Top active members ranked by experience:\n"]
-            for idx, row in enumerate(rows, start=1):
+            for idx, (uid, xp, level) in enumerate(top_10, start=1):
                 medal = MEDALS.get(idx, f"`{idx}.`")
-                member = interaction.guild.get_member(row.user_id)
-                name = member.mention if member else f"User `{row.user_id}`"
-                lines.append(f"{medal} **{name}** — Level {row.level} • `{row.xp:,} XP`")
+                member = interaction.guild.get_member(uid)
+                name = member.mention if member else f"User `{uid}`"
+                lines.append(f"{medal} **{name}** — Level {level} • `{xp:,} XP`")
 
             lines.append("\n*Chat in text channels to climb the ranks!*")
             embed = discord.Embed(
@@ -233,19 +234,15 @@ class Levels(commands.Cog):
 
     @app_commands.command(name="show_xp", description="Show the current XP breakdown of a user")
     async def show_xp_command(self, interaction: discord.Interaction, user: discord.Member | None = None):
+        """Display detailed XP breakdown and progress to the next milestone."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
 
-        if not async_session:
-            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
-            return
-
         target = user or interaction.user
-        async with async_session() as session:
-            user_xp = await session.get(UserXP, (interaction.guild.id, target.id))
-            xp = user_xp.xp if user_xp else 0
-            level = user_xp.level if user_xp else 0
+        user_data = self.get_user_data(interaction.guild.id, target.id)
+        xp = user_data["xp"]
+        level = user_data["level"]
 
         current_base = xp_for_level(level)
         next_base = xp_for_level(level + 1)
@@ -274,26 +271,21 @@ class Levels(commands.Cog):
     @app_commands.command(name="add_xp", description="Add XP to a member (Admin)")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def add_xp_command(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Add experience points to a member in this server."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        if not async_session:
-            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         if amount <= 0:
             await interaction.response.send_message("Amount must be greater than zero.", ephemeral=True)
             return
 
-        async with async_session() as session:
-            async with session.begin():
-                user_xp = await self.get_or_create_user(session, interaction.guild.id, user.id)
-                user_xp.xp += amount
-                user_xp.level = calculate_level(user_xp.xp)
-                user_xp.last_xp = datetime.now(timezone.utc)
-                new_xp = user_xp.xp
-                new_level = user_xp.level
+        user_data = self.get_user_data(interaction.guild.id, user.id)
+        user_data["xp"] += amount
+        user_data["level"] = calculate_level(user_data["xp"])
+        user_data["last_xp"] = time.time()
+        new_xp = user_data["xp"]
+        new_level = user_data["level"]
 
         embed = discord.Embed(
             title="✨ XP Added",
@@ -307,26 +299,21 @@ class Levels(commands.Cog):
     @app_commands.command(name="remove_xp", description="Remove XP from a member (Admin)")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def remove_xp_command(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Remove experience points from a member without dropping below 0."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        if not async_session:
-            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         if amount <= 0:
             await interaction.response.send_message("Amount must be greater than zero.", ephemeral=True)
             return
 
-        async with async_session() as session:
-            async with session.begin():
-                user_xp = await self.get_or_create_user(session, interaction.guild.id, user.id)
-                user_xp.xp = max(0, user_xp.xp - amount)
-                user_xp.level = calculate_level(user_xp.xp)
-                user_xp.last_xp = datetime.now(timezone.utc)
-                new_xp = user_xp.xp
-                new_level = user_xp.level
+        user_data = self.get_user_data(interaction.guild.id, user.id)
+        user_data["xp"] = max(0, user_data["xp"] - amount)
+        user_data["level"] = calculate_level(user_data["xp"])
+        user_data["last_xp"] = time.time()
+        new_xp = user_data["xp"]
+        new_level = user_data["level"]
 
         embed = discord.Embed(
             title="📉 XP Removed",
@@ -340,26 +327,21 @@ class Levels(commands.Cog):
     @app_commands.command(name="set_xp", description="Set a member's XP directly (Admin)")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def set_xp_command(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Set a member's experience points directly."""
         if not interaction.guild:
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-            return
-
-        if not async_session:
-            await interaction.response.send_message("Database is not configured. Persistent XP is currently unavailable.", ephemeral=True)
             return
 
         if amount < 0:
             await interaction.response.send_message("XP amount cannot be negative.", ephemeral=True)
             return
 
-        async with async_session() as session:
-            async with session.begin():
-                user_xp = await self.get_or_create_user(session, interaction.guild.id, user.id)
-                user_xp.xp = amount
-                user_xp.level = calculate_level(user_xp.xp)
-                user_xp.last_xp = datetime.now(timezone.utc)
-                new_xp = user_xp.xp
-                new_level = user_xp.level
+        user_data = self.get_user_data(interaction.guild.id, user.id)
+        user_data["xp"] = amount
+        user_data["level"] = calculate_level(user_data["xp"])
+        user_data["last_xp"] = time.time()
+        new_xp = user_data["xp"]
+        new_level = user_data["level"]
 
         embed = discord.Embed(
             title="⚙️ XP Set",

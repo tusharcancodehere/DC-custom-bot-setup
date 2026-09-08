@@ -1,6 +1,6 @@
 # Security Policy
 
-The security of **DC Custom Bot** and its users is a top priority. Because the bot handles Discord interactions, external API integrations, and database operations, maintaining robust security practices is critical for all contributors and server administrators.
+The security of **DC Custom Bot** and its users is a top priority. Because the bot handles Discord interactions, external API integrations, and environment credentials (with database persistence planned), maintaining robust security practices is critical for all contributors and server administrators.
 
 ---
 
@@ -61,10 +61,11 @@ To help us investigate and resolve the issue quickly, please include:
 * Never hardcode sensitive values directly into source code, test files, or default parameter values.
 * Ensure loggers do not print environment variables, request headers, database connection strings, or config structures that could contain secrets.
 
-### 3. Database Security & Credentials
+### 3. Database Security & Credentials (Planned Persistence)
 
+If configuring the optional `DATABASE_URL` for planned persistent storage:
 * **Connection Strings**: `DATABASE_URL` contains database credentials. Never hardcode fallback credentials or database passwords directly in Python code or configuration defaults. See [docs/database.md](docs/database.md) for details.
-* **Network Isolation**: In production, bind PostgreSQL to local loopback (`127.0.0.1`) or private container networks; avoid exposing PostgreSQL port `5432` to the public internet without SSL and strict firewall rules.
+* **Network Isolation**: When using PostgreSQL, bind it to local loopback (`127.0.0.1`) or private container networks; avoid exposing PostgreSQL port `5432` to the public internet without SSL and strict firewall rules.
 * **SQL Injection Prevention**: Always use SQLAlchemy ORM or parameterized queries via `asyncpg`. Never concatenate raw user input strings directly into SQL statements.
 
 ### 4. Discord Permissions and Gateway Intents

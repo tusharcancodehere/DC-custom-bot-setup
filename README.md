@@ -1,86 +1,92 @@
 # DC Custom Bot
 
-A beginner-friendly, modular open-source Discord bot built with Python 3.13 and [`discord.py`](https://github.com/Rapptz/discord.py).
+A beginner-friendly, modular open-source Discord bot built with Python and [`discord.py`](https://github.com/Rapptz/discord.py).
 
-DC Custom Bot provides server moderation, persistent leveling with PostgreSQL, music playback, dual-provider AI assistance, customizable welcome cards, and general utilities in a single, clean bot. It is designed to be fully multi-server compatible and hosting-ready: clone the repo, configure your token, and run!
+DC Custom Bot is an early-stage open-source Discord bot providing server moderation, dual-provider conversational AI, customizable welcome embeds, and general utilities in a clean, non-overengineered architecture. Additional features such as persistent leveling, music playback, and database storage are actively in progress.
 
 ---
 
 ## Current Status
 
-> **Status:** Production-Ready Core & Active Development
+> **Status:** Early-Stage / Active Development
 
-All 28 slash commands are fully functional, globally synchronized, and tested across multiple servers simultaneously. Persistent XP storage uses PostgreSQL with SQLAlchemy 2.0 and Alembic (and safely degrades if a database is not configured). Voice playback uses `yt-dlp` and FFmpeg. Conversational AI supports OpenAI with automatic Google Gemini fallback. Track upcoming features in [`TODO.md`](TODO.md).
+The core features listed below are currently implemented, functional, and ready to use. Advanced capabilities such as database persistence and music streaming are actively in development or planned.
+
+Track upcoming features and active milestones in [`TODO.md`](TODO.md).
 
 ---
 
-## Features
+## Implemented Features
 
 ### 🛡️ Moderation
-Server management commands with permission checks and role hierarchy protection:
+Member and message moderation commands equipped with permission checks, role hierarchy validation, and direct message notifications:
 * `/kick` — Kick a member from the server with an optional reason.
 * `/ban` — Ban a member from the server with an optional reason.
-* `/unban` — Unban a user by their Discord user ID.
-* `/timeout` — Temporarily timeout a member for a duration in minutes.
+* `/unban` — Unban a user by their Discord user ID with an optional reason.
+* `/timeout` — Temporarily timeout a member for a specified duration in minutes with an optional reason.
 * `/purge` — Bulk delete recent channel messages (1–1,000 messages).
-* `/warn` — Send a formal direct message warning to a member.
+* `/warn` — Send a formal direct message warning to a member with an optional reason.
+* **Security & Hierarchy Checks**: Prevents actions against server owners, the bot itself, or members with equal or higher roles. Enforces server-side permissions (`has_permissions`).
 
-### 🎵 Music
-Voice channel audio playback and queue management powered by `yt-dlp` and FFmpeg:
-* `/play` — Search YouTube or provide a direct audio URL to play in voice.
-* `/random` — Play a randomly discovered music track from the internet.
-* `/pause` — Pause current playback.
-* `/resume` — Resume paused audio.
-* `/skip` — Skip the current track to play the next song in the queue.
-* `/stop` — Stop playback and clear the guild queue.
-* `/queue` — View currently queued tracks with duration details.
-* `/volume` — Adjust audio volume (0–100%).
-* `/player` — Display an interactive music player with controls.
-* `/leave` — Disconnect the bot from the voice channel.
-* `/247` — Toggle 24/7 mode to keep the bot connected in voice even when idle.
+### 👑 Administration
+Server and bot administrative tools (kept strictly separate from member punishments):
+* `/serverinfo` — View comprehensive administrative details about the current server (Members, Channels, Roles, Owner, Creation date).
+* `/botinfo` — View bot runtime statistics, connected servers count, latency, and system status.
+* `/server_settings` — View current administrative settings and bot configuration for the guild.
+* **Access Control**: Enforces `manage_guild` permissions with clear, friendly error feedback.
+
+### 🆙 Level System
+Server activity and XP system designed for clean multi-server operation:
+* `/level` — Display your rank card with current level, XP, and visual progress bar.
+* `/rank` — Alias to view your server rank and experience.
+* `/leaderboard` — View the top 10 most active members in the current server.
+* `/show_xp` — View detailed experience breakdown and progress toward the next level milestone.
+* `/add_xp` — Add experience points to a member (Admin).
+* `/remove_xp` — Remove experience points from a member without dropping below 0 (Admin).
+* `/set_xp` — Set a member's experience points directly (Admin).
+* **Multi-Server Isolation**: XP is strictly isolated per server and user. Member XP in Server A never affects Server B. Includes 60-second anti-spam cooldowns and level-up celebration messages.
 
 ### 🤖 AI Assistant
 Conversational AI powered by dual providers with automated fallback:
-* `/ask` — Send prompts to the AI assistant. Queries OpenAI (`gpt-5-mini`) first, automatically falling back to Google Gemini (`gemini-2.5-flash`) if OpenAI is unavailable.
-* `/clear` — Reset your personal conversation history in the current server.
+* `/ask` — Send prompts and questions to the AI assistant. Queries OpenAI (`gpt-5-mini`) as the primary provider, automatically falling back to Google Gemini (`gemini-2.5-flash`) if OpenAI is unavailable.
+* `/clear` — Reset your personal in-memory conversation history in the current server.
+* **Context & Formatting**: Maintains per-user in-memory conversation history, instructs models to provide concise and direct responses, and handles Discord message length limits.
 
 ### 👋 Welcome System
-Member greeting functionality:
-* `/welcome` — Displays a formatted welcome embed loaded from [`embed.json`](src/features/welcome/embed.json) with dynamic channel mentions and server branding.
-
-### 🆙 Level System
-Activity and rank tracking components with persistent PostgreSQL storage:
-* `/level` — Display a rank and level card with visual progress bars.
-* `/rank` — View your server rank and experience.
-* `/leaderboard` — View the top 10 most active members in the server.
-* `/show_xp` — View the complete XP breakdown of a member.
-* `/add_xp` — Add experience to a member (Admin).
-* `/remove_xp` — Remove experience from a member without dropping below 0 (Admin).
-* `/set_xp` — Set a member's experience directly (Admin).
+Server greeting and onboarding announcements:
+* `/welcome` — Displays a formatted welcome embed loaded from [`embed.json`](src/features/welcome/embed.json).
+* **Dynamic Placeholders**: Supports clickable Discord channel placeholders such as `{rules}`, `{roles}`, `{general}`, and `{support}` that resolve to server channels dynamically.
 
 ### ⚙️ General & Utility
-* `/ping` — Check bot connectivity, response latency, and operational status.
+Core maintenance and diagnostic commands:
+* `/ping` — Check bot connectivity, WebSocket response latency, and operational status.
 * `!shutdown` — Gracefully shut down the bot (restricted to the application owner).
-* **Global Command Syncing** — Automatically registers and synchronizes slash commands globally across every Discord server where the bot is installed.
+* **Global Syncing**: Automatically registers and synchronizes slash commands globally across servers where the bot is installed.
+
+---
+
+## In-Progress & Planned Features
+
+The following features are currently scaffolded or planned on our roadmap:
+
+* **🎵 Music Playback (In Progress)**: Voice channel streaming powered by `yt-dlp` and FFmpeg, playback queues, and interactive player controls (`/play`, `/player`, etc.).
+* **🗄️ Database Persistence (Planned)**: PostgreSQL and SQLAlchemy 2.0 integration with Alembic schema migrations for persistent server configuration and long-term XP storage across bot restarts.
+* **🎫 Support Tickets (Planned)**: Ticket creation buttons, private support channels, and transcript archives.
+* **🎲 Mini-Games (Planned)**: Interactive server games such as coin flip, dice roll, rock-paper-scissors, and trivia.
 
 ---
 
 ## Technology Stack
 
-| Technology | Version | Purpose |
+| Technology | Purpose | Documentation |
 | :--- | :--- | :--- |
-| **Python** | `>= 3.11` | Core programming language |
-| **discord.py** | `>= 2.7.1` | Discord API wrapper and bot framework |
-| **SQLAlchemy** | `>= 2.0.52` | Modern asynchronous ORM and database toolkit |
-| **asyncpg** | `>= 0.31.0` | High-performance PostgreSQL asynchronous driver |
-| **Alembic** | `>= 1.19.1` | Database schema migrations |
-| **yt-dlp** | `>= 2026.8.19` | Audio streaming and metadata extraction |
-| **yt-dlp-ejs** | `>= 0.8.0` | JavaScript challenge solver for yt-dlp |
-| **PyNaCl** | `>= 1.6.2` | Voice encryption library |
-| **FFmpeg** | System binary | Audio decoding and transcode pipeline |
-| **OpenAI SDK** | `>= 3.8.0` | OpenAI API client for AI assistant |
-| **Google GenAI** | `>= 2.22.0` | Google Gemini API client for fallback AI assistant |
-| **uv** | Latest | Fast Python package and dependency manager |
+| **Python** (`>= 3.11`) | Core programming language | [Python Docs](https://docs.python.org/3/) |
+| **discord.py** (`>= 2.7.1`) | Modern Discord API wrapper | [discord.py Docs](https://discordpy.readthedocs.io/) |
+| **OpenAI SDK** (`>= 3.8.0`) | Primary AI provider for `/ask` | [OpenAI Docs](https://platform.openai.com/docs) |
+| **Google GenAI** (`>= 2.22.0`) | Fallback AI provider for `/ask` | [Google GenAI Docs](https://ai.google.dev/) |
+| **uv** | Fast Python package and project manager | [uv Docs](https://docs.astral.sh/uv/) |
+| **SQLAlchemy / asyncpg / Alembic** | Database dependencies (for planned persistence) | [SQLAlchemy Docs](https://docs.sqlalchemy.org/) |
+| **yt-dlp / FFmpeg** | Audio dependencies (for in-progress music features) | [yt-dlp Docs](https://github.com/yt-dlp/yt-dlp) |
 
 ---
 
@@ -89,44 +95,41 @@ Activity and rank tracking components with persistent PostgreSQL storage:
 ```text
 DC-custom-bot-setup/
 ├── src/
-│   ├── main.py              # Single application entrypoint
+│   ├── main.py              # Application entrypoint
 │   ├── core/                # Core bot framework and shared services
-│   │   ├── bot.py           # CustomBot class, setup_hook, on_ready sync, logging
-│   │   ├── config.py        # Environment loading, startup validation, colors
+│   │   ├── bot.py           # CustomBot class, bot lifecycle, command sync
+│   │   ├── config.py        # Environment loading & startup validation
 │   │   ├── errors.py        # Global exception handling
-│   │   ├── loader.py        # Cog discovery and loading
-│   │   ├── logging.py       # Application logging utilities
+│   │   ├── loader.py        # Dynamic Cog discovery and loading
+│   │   ├── logging.py       # Centralized application logging
 │   │   └── permissions.py   # Permission checks and decorators
-│   ├── features/            # Independent, modular bot features
+│   ├── features/            # Modular bot features
 │   │   ├── ai/              # AI assistant (/ask, /clear)
 │   │   ├── general/         # General utility commands (/ping)
-│   │   ├── levels/          # Persistent XP tracking and rank cards (/level, /rank, etc.)
-│   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, etc.)
-│   │   ├── music/           # Audio playback, queues, and player (/play, /queue, etc.)
-│   │   └── welcome/         # Welcome messages and templates (/welcome)
+│   │   ├── levels/          # Level system (in progress)
+│   │   ├── moderation/      # Moderation commands (/kick, /ban, /timeout, /purge, /warn)
+│   │   ├── music/           # Music streaming (in progress)
+│   │   └── welcome/         # Welcome embed templates (/welcome)
 │   ├── views/               # Shared Discord UI components
 │   │   └── common.py
-│   └── database/            # Database engine, models, and session management
+│   └── database/            # Database engine and models (for planned persistence)
 │       ├── database.py      # Async engine and session factory
-│       └── models.py        # SQLAlchemy UserXP model
-├── alembic/                 # Database schema migrations
-│   ├── versions/            # Migration version scripts
-│   └── env.py               # Async Alembic migration runner
-├── docs/                    # Architectural and developer documentation
-│   └── database.md          # Database setup and migration guide
-├── requirements.txt         # Standalone pip dependencies for hosting panels
+│       └── models.py        # SQLAlchemy models
+├── alembic/                 # Database schema migrations (planned)
+├── docs/                    # Architectural and database guides
+│   └── database.md
+├── requirements.txt         # Standalone pip requirements for standard hosting
 ├── Dockerfile               # Production container definition
 ├── .dockerignore            # Container build exclusion rules
-├── .env.example             # Configuration template with safe empty placeholders
-├── .python-version          # Recommended Python version (3.13)
-├── pyproject.toml           # Project metadata and dependencies
+├── .env.example             # Configuration template with placeholder values
+├── pyproject.toml           # Project dependencies and tool configuration
 ├── uv.lock                  # Pinned dependency lockfile
 ├── LICENSE                  # MIT License
 ├── CONTRIBUTING.md          # Contribution guidelines
 ├── CODE_OF_CONDUCT.md       # Contributor Code of Conduct
 ├── SECURITY.md              # Security policy and disclosure process
 ├── TODO.md                  # Project roadmap and completed tasks
-└── README.md                # Project documentation overview
+└── README.md                # Project overview
 ```
 
 ---
@@ -149,7 +152,7 @@ Follow these beginner-friendly steps to create your Discord bot in the developer
 1. In the left navigation sidebar, ensure you are on the **General Information** page.
 2. Locate the field labeled **Application ID**.
 3. Click the **Copy** button beneath the ID.
-4. Keep this value handy — you will paste it as `APPLICATION_ID` in your `.env` file or hosting panel.
+4. Save this value — you will paste it as `APPLICATION_ID` in your `.env` file or hosting panel.
 
 ### Step 4: Create the Bot and Copy Your Bot Token
 1. In the left sidebar, click on **Bot**.
@@ -157,7 +160,7 @@ Follow these beginner-friendly steps to create your Discord bot in the developer
 3. Click **Copy** to copy your bot token immediately.
    > [!IMPORTANT]
    > Discord only displays your bot token once! If you lose it or close the page, you will need to click **Reset Token** again. Never share this token with anyone or commit it to GitHub.
-4. Keep this value handy — you will paste it as `DISCORD_TOKEN` in your `.env` file or hosting panel.
+4. Save this value — you will paste it as `DISCORD_TOKEN` in your `.env` file or hosting panel.
 
 ### Step 5: Enable Privileged Gateway Intents (Required)
 The bot requires specific Discord Gateway Intents to listen for messages, award XP, and manage members:
@@ -165,30 +168,25 @@ The bot requires specific Discord Gateway Intents to listen for messages, award 
 2. Scroll down to the section titled **Privileged Gateway Intents**.
 3. Toggle the switch to **ON** for both:
    * **Server Members Intent** (required for member management, welcome cards, and permission checks)
-   * **Message Content Intent** (required for awarding chat XP and reading command content)
+   * **Message Content Intent** (required for reading command content and chat messages)
 4. Click the green **Save Changes** button at the bottom of the page.
 
 ### Step 6: Invite the Bot to Your Discord Server
 1. In the left sidebar, navigate to **OAuth2** -> **URL Generator**.
 2. Under the **Scopes** section, check the following boxes:
    * `bot`
-   * `applications.commands` (required to register slash commands)
-3. Under the **Bot Permissions** section that appears below, select either:
-   * **Administrator** (recommended for testing or full server management), or:
-   * Select specific permissions:
-     * *General*: Manage Roles, Kick Members, Ban Members, Moderate Members, View Audit Log, Read Messages/View Channels.
-     * *Text*: Send Messages, Send Messages in Threads, Manage Messages, Embed Links, Attach Files, Read Message History, Mention @everyone.
-     * *Voice*: Connect, Speak, Use Voice Activity.
+   * `applications.commands`
+3. Under the **Bot Permissions** section that appears below, select the necessary permissions (e.g., Administrator for full functionality).
 4. Scroll to the bottom of the page and copy the link from the **Generated URL** box.
 5. Paste this URL into your web browser, select your target Discord server from the dropdown, and click **Authorize**.
 
 ---
 
-## Setup & Deployment Options
+## Setup & Running
 
 ### Configuration & Environment Variables
 
-Copy the template to create your `.env` file (or configure these variables directly in your hosting panel):
+Create your local `.env` file from the example template:
 
 ```bash
 cp .env.example .env
@@ -196,25 +194,25 @@ cp .env.example .env
 
 | Variable | Required | Description |
 | :--- | :---: | :--- |
-| `DISCORD_TOKEN` | **Yes** | Discord Bot token generated from the [Discord Developer Portal](https://discord.com/developers/applications). |
-| `APPLICATION_ID` | **Yes** | Discord Application / Client ID from the [Discord Developer Portal](https://discord.com/developers/applications). |
-| `DATABASE_URL` | Optional | PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, database-backed features safely degrade. |
+| `DISCORD_TOKEN` | **Yes** | Bot token from the [Discord Developer Portal](https://discord.com/developers/applications). |
+| `APPLICATION_ID` | **Yes** | Application / Client ID from the [Discord Developer Portal](https://discord.com/developers/applications). |
 | `OPENAI_API_KEY` | Optional | OpenAI API key for `/ask` (`gpt-5-mini`). |
 | `GEMINI_API_KEY` | Optional | Google Gemini API key for `/ask` fallback (`gemini-2.5-flash`). |
+| `DATABASE_URL` | Optional | PostgreSQL connection string (`postgresql+asyncpg://...`) for planned persistence. |
 
 > [!WARNING]
 > Never commit your `.env` file or expose your bot token publicly.
 
 ---
 
-### Option 1: Local Development (`uv`)
+### Option 1: Local Development (`uv` - Recommended)
 
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/tusharcancodehere/DC-custom-bot-setup.git
    cd DC-custom-bot-setup
    ```
-2. **Configure environment variables**:
+2. **Configure credentials**:
    ```bash
    cp .env.example .env
    # Edit .env with your DISCORD_TOKEN and APPLICATION_ID
@@ -223,43 +221,46 @@ cp .env.example .env
    ```bash
    uv sync
    ```
-4. **Run database migrations** (optional, if `DATABASE_URL` is set):
-   ```bash
-   uv run alembic upgrade head
-   ```
-5. **Start the bot**:
+4. **Start the bot**:
    ```bash
    uv run python src/main.py
    ```
 
 ---
 
-### Option 2: Hosting Panels (Pterodactyl / FPS.ms / Generic VPS)
+### Option 2: Standard Python (`pip`)
 
-For bot hosting platforms that provide standard Python environments without `uv`:
+For environments without `uv`:
 
-1. **Upload or clone** the repository to your hosting server.
-2. **Set environment variables** directly in the hosting panel (`DISCORD_TOKEN`, `APPLICATION_ID`, and optionally `DATABASE_URL`, etc.).
-3. **Set the application entry point** to [`src/main.py`](src/main.py).
-4. **Install dependencies** using the provided [`requirements.txt`](requirements.txt):
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/tusharcancodehere/DC-custom-bot-setup.git
+   cd DC-custom-bot-setup
+   ```
+2. **Create and activate a virtual environment**:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
-5. **Ensure FFmpeg is installed** on the host for voice/music capabilities.
-6. **Apply migrations** (if using PostgreSQL):
+4. **Configure credentials**:
    ```bash
-   alembic upgrade head
+   cp .env.example .env
+   # Edit .env with your DISCORD_TOKEN and APPLICATION_ID
    ```
-7. **Start the bot**:
+5. **Start the bot**:
    ```bash
    python src/main.py
    ```
 
 ---
 
-### Option 3: Containerized Hosting (Docker)
+### Option 3: Docker Container
 
-A production-ready [Dockerfile](Dockerfile) is included:
+A [Dockerfile](Dockerfile) is included for containerized environments:
 
 1. **Build the container image**:
    ```bash
@@ -272,26 +273,18 @@ A production-ready [Dockerfile](Dockerfile) is included:
 
 ---
 
-## Database & Migrations
-
-The bot uses PostgreSQL with SQLAlchemy 2.0 and `asyncpg`. Schema migrations are managed through **Alembic**. Detailed database setup instructions are available in the [Database Guide](docs/database.md).
-
-* **Apply latest migrations**:
-  ```bash
-  alembic upgrade head
-  ```
-* **Database Optionality**: If `DATABASE_URL` is not set or the database is unavailable, the bot starts normally and features requiring persistence (such as XP tracking) report:
-  `"Database is not configured. Persistent XP is currently unavailable."`
-
----
-
 ## Verification & Code Quality
 
 Verify that all Python source files compile cleanly without syntax errors:
 
-```bash
-uv run python -m compileall -q src
-```
+* Using `uv`:
+  ```bash
+  uv run python -m compileall -q src
+  ```
+* Using standard Python:
+  ```bash
+  python -m compileall -q src
+  ```
 
 ---
 
@@ -299,14 +292,14 @@ uv run python -m compileall -q src
 
 Contributions from the open-source community are warmly welcomed!
 
-* Please read our [**Contributing Guide**](CONTRIBUTING.md) for full instructions on local setup, code conventions, branch naming, and opening pull requests.
+* Please read our [**Contributing Guide**](CONTRIBUTING.md) for local development conventions, coding standards, and how to submit focused pull requests.
 * All participants must abide by our [**Code of Conduct**](CODE_OF_CONDUCT.md).
 
 ---
 
 ## Security
 
-If you discover a security vulnerability, please do **not** report it via public GitHub issues or public chat. Refer to our [**Security Policy**](SECURITY.md) for instructions on confidential reporting.
+If you discover a security vulnerability, please do **not** report it via public GitHub issues or chat. Refer to our [**Security Policy**](SECURITY.md) for instructions on confidential reporting.
 
 ---
 

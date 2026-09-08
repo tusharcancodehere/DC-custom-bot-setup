@@ -1,150 +1,137 @@
 # Project Roadmap & TODO
 
-This document tracks completed milestones, current features, and future plans for **DC Custom Bot**.
-
-All active features are beginner-friendly, fully multi-server compatible, and globally synchronized.
+This document is the source of truth for project progress, tracking implemented features, in-progress modules, and future roadmap items for **DC Custom Bot**.
 
 ---
 
-## Foundation
+## Foundation (Completed)
 
-* [x] Create bot core ([`src/core/bot.py`](src/core/bot.py))
-* [x] Load environment variables ([`src/core/config.py`](src/core/config.py))
-* [x] Implement Discord client with auto-reconnect
+* [x] Create bot core framework ([`src/core/bot.py`](src/core/bot.py))
+* [x] Environment variable configuration & validation ([`src/core/config.py`](src/core/config.py))
+* [x] Discord client initialization with auto-reconnect
 * [x] Dynamic Cog discovery and loading ([`src/core/loader.py`](src/core/loader.py))
 * [x] Global slash command synchronization
-* [x] Global error handling ([`src/core/errors.py`](src/core/errors.py))
-* [x] Application logging with stdout support ([`src/core/logging.py`](src/core/logging.py))
-* [x] Permission checks and decorators ([`src/core/permissions.py`](src/core/permissions.py))
-* [x] Common Discord UI views and buttons ([`src/views/common.py`](src/views/common.py))
+* [x] Global application error handling ([`src/core/errors.py`](src/core/errors.py))
+* [x] Centralized application logging with stdout support ([`src/core/logging.py`](src/core/logging.py))
+* [x] Reusable permission checks and role hierarchy decorators ([`src/core/permissions.py`](src/core/permissions.py))
+* [x] Shared Discord UI components and views ([`src/views/common.py`](src/views/common.py))
+* [x] Graceful shutdown handling (`SIGINT`, `SIGTERM`, `!shutdown`)
 
 ---
 
-## Database
+## Implemented Feature Groups
 
-* [x] Configure PostgreSQL connection environment ([`src/database/database.py`](src/database/database.py))
-* [x] Configure SQLAlchemy 2.0 async engine and sessionmaker
-* [x] Configure asyncpg driver support
-* [x] Configure Alembic database migration environment ([`alembic/`](alembic/))
-* [x] Create initial database models ([`src/database/models.py`](src/database/models.py))
-* [x] Create migration workflow ([`alembic/versions/001_create_user_xp_table.py`](alembic/versions/001_create_user_xp_table.py))
-* [x] Add user XP model (`UserXP`)
-* [x] Safe database connection testing and graceful degradation if offline
-* [ ] Add guild configuration model (custom prefix, log channels)
-* [ ] Add moderation log model (case history, warnings)
+### General
+* [x] Connectivity diagnostic command (`/ping`)
+* [x] Application owner shutdown command (`!shutdown`)
+
+### Administration
+* [x] Server administrative overview command (`/serverinfo`)
+* [x] Bot administrative status command (`/botinfo`)
+* [x] Server configuration settings command (`/server_settings`)
+* [x] Administrative permission checks (`manage_guild`)
+
+### Moderation
+* [x] Kick member command (`/kick`)
+* [x] Ban member command (`/ban`)
+* [x] Unban user command (`/unban`)
+* [x] Temporary member timeout command (`/timeout`)
+* [x] Bulk message purge command (`/purge` - up to 1,000 messages)
+* [x] Formal direct message warning command (`/warn`)
+* [x] Optional moderation reasons for all actions
+* [x] Server-side Discord permission checks (`has_permissions`)
+* [x] Role hierarchy protection (blocks targeting owner, bot, or equal/higher roles)
+* [x] Direct message delivery to warned members
+
+### Level System
+* [x] Multi-server isolated XP tracking
+* [x] Random message XP rewards (15–25 XP per message)
+* [x] Anti-spam message cooldown (60 seconds per user per server)
+* [x] Level calculation formula and progress bars
+* [x] Interactive rank card commands (`/level`, `/rank`)
+* [x] Server top 10 leaderboard command (`/leaderboard`)
+* [x] Detailed XP breakdown command (`/show_xp`)
+* [x] Admin XP management commands (`/add_xp`, `/remove_xp`, `/set_xp`)
+* [x] Level-up announcement messages in chat
+* [x] Customizable rank card embed styling ([`src/features/levels/embed.json`](src/features/levels/embed.json))
+
+### Welcome
+* [x] Welcome announcement command (`/welcome`)
+* [x] JSON-based welcome embed template ([`src/features/welcome/embed.json`](src/features/welcome/embed.json))
+* [x] Dynamic channel mention placeholders (`{rules}`, `{roles}`, `{general}`, `{support}`)
+
+### AI Assistant
+* [x] Conversational AI command (`/ask`)
+* [x] Reset personal conversation history (`/clear`)
+* [x] Primary AI provider: OpenAI (`gpt-5-mini`)
+* [x] Automatic fallback provider: Google Gemini (`gemini-2.5-flash`)
+* [x] Per-user in-memory conversation history
+* [x] Concise and direct system instructions
+* [x] Safe error messaging when API keys are unconfigured
 
 ---
 
-## Moderation
+## In Progress
 
-* [x] Ban command (`/ban`)
-* [x] Unban command (`/unban`)
-* [x] Kick command (`/kick`)
-* [x] Timeout command (`/timeout`)
-* [x] Direct message warning (`/warn`)
-* [x] Bulk message purge (`/purge` - up to 1,000 messages)
-* [ ] Warning history inspection
-* [ ] Lock and unlock channel commands
-* [ ] Slowmode management
-* [ ] Server moderation logging channel
+### Music
+* [ ] Voice channel connection and lifecycle management
+* [ ] Audio streaming via yt-dlp and FFmpeg
+* [ ] Play command with YouTube search (`/play`)
+* [ ] Random music discovery command (`/random`)
+* [ ] Playback controls (`/pause`, `/resume`, `/skip`, `/stop`)
+* [ ] Queue display command (`/queue`)
+* [ ] Volume adjustment command (`/volume`)
+* [ ] Interactive player view with button controls (`/player`)
+* [ ] Voice disconnect command (`/leave`)
+* [ ] 24/7 continuous voice connection mode (`/247`)
+* [ ] Automatic audio cache cleanup
+
+---
+
+## Planned Work
+
+### Database & Persistence
+* [ ] Active PostgreSQL persistent storage integration
+* [ ] SQLAlchemy 2.0 async session integration in feature Cogs
+* [ ] Alembic schema migrations workflow for production
+* [ ] Guild configuration model (custom prefix, custom log channels)
+* [ ] Moderation case log model (case IDs, infraction history, timestamps)
+
+### Advanced Moderation
+* [ ] Warning history inspection command
+* [ ] Channel lockdown commands (`/lock`, `/unlock`)
+* [ ] Slowmode management command
+* [ ] Dedicated moderation log channel
 * [ ] Automated spam and invite link filtering
 
----
-
-## Welcome
-
-* [x] Welcome announcement command (`/welcome`)
-* [x] Custom welcome embed template ([`src/features/welcome/embed.json`](src/features/welcome/embed.json))
-* [ ] Automatic new member join listener
-* [ ] Member leave announcement
-* [ ] Welcome channel configuration per server
+### Advanced Welcome
+* [ ] Automatic member join event listener
+* [ ] Member leave announcement listener
+* [ ] Server-configurable welcome channel
 * [ ] Auto-role assignment for new members
-* [ ] Dynamic welcome banner image generator
+* [ ] Dynamic banner image generation
+
+### Support Tickets
+* [ ] Ticket creation panel and buttons
+* [ ] Private ticket channel management
+* [ ] Ticket claim and close workflows
+* [ ] Transcript generation and logging
+
+### Mini-Games
+* [ ] Coin flip command
+* [ ] Dice roll command
+* [ ] Rock Paper Scissors command
+* [ ] 8-Ball command
+* [ ] Trivia command
 
 ---
 
-## Level System
-
-* [x] Persistent PostgreSQL XP tracking ([`src/database/models.py`](src/database/models.py))
-* [x] Automatic message XP rewards (15–25 XP per eligible message)
-* [x] Anti-spam message cooldown (60 seconds per user per server)
-* [x] Level calculation formula (`100 * (level ^ 1.5)`)
-* [x] Interactive rank card command (`/level`)
-* [x] Text rank command (`/rank`)
-* [x] Server top 10 leaderboard (`/leaderboard`)
-* [x] Detailed XP breakdown command (`/show_xp`)
-* [x] Admin XP management (`/add_xp`, `/remove_xp`, `/set_xp`)
-* [x] Level-up announcement messages in chat
-* [x] Customizable level embed styling ([`src/features/levels/embed.json`](src/features/levels/embed.json))
-* [x] Graceful degradation if database is not configured
-* [ ] Custom level role rewards
-* [ ] Server-specific XP multipliers
-
----
-
-## Music
-
-* [x] Voice channel connection and management
-* [x] Audio streaming via yt-dlp and FFmpeg
-* [x] Play command with YouTube search (`/play`)
-* [x] Random music discovery playback (`/random`)
-* [x] Pause playback (`/pause`)
-* [x] Resume playback (`/resume`)
-* [x] Skip current track (`/skip`)
-* [x] Stop and clear queue (`/stop`)
-* [x] Queue display (`/queue`)
-* [x] Volume adjustment (`/volume`)
-* [x] Interactive player view with controls (`/player`)
-* [x] Disconnect from voice (`/leave`)
-* [x] 24/7 continuous voice connection mode (`/247`)
-* [x] Automatic queue and cache file cleanup
-
----
-
-## AI Assistant
-
-* [x] Primary OpenAI integration (`gpt-5-mini`)
-* [x] Automatic Google Gemini fallback (`gemini-2.5-flash`)
-* [x] Multi-turn conversational AI command (`/ask`)
-* [x] Reset conversation history (`/clear`)
-* [x] Context limits and response chunking for Discord limits
-* [x] Friendly error handling when API keys are unconfigured
-* [ ] AI moderation helper
-* [ ] AI support ticket assistant
-
----
-
-## Deployment & Hosting
-
-* [x] Single entrypoint (`python src/main.py` / `uv run python src/main.py`)
-* [x] Production containerization ([`Dockerfile`](Dockerfile) & [`.dockerignore`](.dockerignore))
-* [x] Hosting panel support with standalone dependencies ([`requirements.txt`](requirements.txt))
-* [x] Fail-fast environment validation ([`src/core/config.py`](src/core/config.py))
-* [x] Clean standard output logging for hosting consoles
-* [x] Graceful shutdown handling (`SIGINT`, `SIGTERM`, and `!shutdown`)
-* [x] Comprehensive deployment documentation in [`README.md`](README.md)
-* [ ] Docker Compose setup for local PostgreSQL + Bot
-
----
-
-## Documentation
+## Documentation & Repository
 
 * [x] Beginner-friendly [README.md](README.md)
 * [x] Discord Developer Portal setup & credentials guide ([README.md](README.md#discord-bot-setup--credentials-guide))
 * [x] Contributor guidelines in [CONTRIBUTING.md](CONTRIBUTING.md)
 * [x] Community standards in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 * [x] Vulnerability reporting in [SECURITY.md](SECURITY.md)
-* [x] Database and migrations guide in [docs/database.md](docs/database.md)
+* [x] Architectural notes in [docs/database.md](docs/database.md)
 * [x] Open source license in [LICENSE](LICENSE)
-
----
-
-## Future Roadmap
-
-* [ ] Reaction role menus
-* [ ] Community poll system
-* [ ] Server giveaways
-* [ ] Scheduled reminders
-* [ ] Support ticket panels and transcript exports
-* [ ] Server statistics voice channels
-* [ ] Web management dashboard

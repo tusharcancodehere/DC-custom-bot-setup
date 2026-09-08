@@ -14,6 +14,7 @@ load_environment()
 COMMAND_PREFIX = "!"
 LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 EXTENSIONS = [
+    "features.admin.commands",
     "features.welcome.commands",
     "features.levels.commands",
     "features.general.commands",
