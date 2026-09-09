@@ -137,6 +137,7 @@ The following features are planned on our roadmap:
 | **Google GenAI** (`>= 2.22.0`) | Fallback AI provider for `/ask` | [Google GenAI Docs](https://ai.google.dev/) |
 | **uv** | Fast Python package and project manager | [uv Docs](https://docs.astral.sh/uv/) |
 | **SQLAlchemy / asyncpg / aiosqlite / Alembic** | Database persistence engine, async drivers, and migrations | [SQLAlchemy Docs](https://docs.sqlalchemy.org/) |
+| **aiohttp** (`>= 3.14.3`) | Async HTTP server for Render Web Service health endpoint and monitoring | [aiohttp Docs](https://docs.aiohttp.org/) |
 | **yt-dlp / FFmpeg** | Audio streaming dependencies | [yt-dlp Docs](https://github.com/yt-dlp/yt-dlp) |
 
 ---
@@ -151,6 +152,7 @@ DC-custom-bot-setup/
 │   │   ├── bot.py           # CustomBot class, bot lifecycle, command sync
 │   │   ├── config.py        # Environment loading & startup validation
 │   │   ├── errors.py        # Global exception handling
+│   │   ├── health.py        # Lightweight HTTP server for Render Web Service & monitoring
 │   │   ├── loader.py        # Dynamic Cog discovery and loading
 │   │   ├── logging.py       # Centralized application logging
 │   │   └── permissions.py   # Permission checks and decorators
@@ -170,8 +172,9 @@ DC-custom-bot-setup/
 │       ├── database.py      # Async engine and session factory
 │       └── models.py        # SQLAlchemy models
 ├── alembic/                 # Database schema migrations
-├── docs/                    # Architectural and database guides
-│   └── database.md
+├── docs/                    # Architectural, database, and deployment guides
+│   ├── database.md
+│   └── deployment.md
 ├── requirements.txt         # Standalone pip requirements for standard hosting
 ├── Dockerfile               # Production container definition
 ├── .dockerignore            # Container build exclusion rules
@@ -250,6 +253,8 @@ cp .env.example .env
 | :--- | :---: | :--- |
 | `DISCORD_TOKEN` | **Yes** | Bot token from the [Discord Developer Portal](https://discord.com/developers/applications). |
 | `APPLICATION_ID` | **Yes** | Application / Client ID from the [Discord Developer Portal](https://discord.com/developers/applications). |
+| `SERVER_ID` | Optional | Target Discord Server / Guild ID for instant guild-scoped command synchronization during development. |
+| `PORT` | Optional | HTTP port for Render Web Service health endpoint and uptime monitoring (defaults to `10000`; Render sets this automatically). |
 | `OPENAI_API_KEY` | Optional | OpenAI API key for `/ask` (`gpt-5-mini`). |
 | `GEMINI_API_KEY` | Optional | Google Gemini API key for `/ask` fallback (`gemini-2.5-flash`). |
 | `DATABASE_URL` | Optional | Database connection string. Recommended for PostgreSQL in production (`postgresql+asyncpg://...`). If left empty, SQLite is used automatically (`sqlite+aiosqlite:///data/bot.db`). |
@@ -348,6 +353,122 @@ A [`docker-compose.yml`](docker-compose.yml) is included to run the bot alongsid
    ```bash
    docker compose down
    ```
+
+---
+
+### Option 5: Render Web Service Deployment (Free Cloud Hosting)
+
+Deploy your Discord bot to [Render](https://render.com/) as a **Web Service** with an integrated lightweight HTTP health check server and automated uptime monitoring.
+
+#### Architecture & Deployment Flow
+
+```text
+GitHub Repository ──> Render Web Service (Build & Deploy) ──> Python Process
+                                                               ├── Discord Bot (Gateway Connection)
+                                                               └── aiohttp HTTP Server (0.0.0.0:$PORT)
+                                                                     ├── GET /       -> {"status": "ok"}
+                                                                     └── GET /health -> {"status": "ok"}
+                                                                            ▲
+                                                                            │
+                                                        UptimeRobot Monitor (Every 5–10 mins)
+                                                        URL: https://<your-service>.onrender.com/health
+```
+
+#### Why a Web Service instead of a Background Worker?
+
+* **Free Tier Availability**: Render provides a free tier for **Web Services**, whereas **Background Workers** require a paid subscription.
+* **Port Binding Requirement**: Render Web Services require a process that binds to a TCP port (`0.0.0.0:$PORT`) and responds to HTTP requests. If no HTTP port is opened, Render terminates the deployment with a `"No open ports detected"` error.
+* **Asynchronous Health Server**: The bot includes a lightweight, non-blocking [`aiohttp`](src/core/health.py) server that runs alongside the Discord bot inside the same event loop. It serves `GET /` and `GET /health` with HTTP 200 `{"status": "ok"}` without delaying Discord Gateway connection or command syncing.
+
+#### Step-by-Step Render Deployment
+
+1. **Fork or Push Your Code**: Push your bot repository to GitHub.
+2. **Create New Web Service**:
+   * Navigate to the [Render Dashboard](https://dashboard.render.com/).
+   * Click **New +** and select **Web Service**.
+   * Connect your GitHub repository.
+3. **Configure the Web Service**:
+   * **Name**: `dc-custom-bot` (or your preferred service name)
+   * **Region**: Select the region closest to you or your target Discord audience (e.g., Oregon, Frankfurt, Singapore)
+   * **Branch**: `main`
+   * **Runtime**: `Python 3` (or `Docker` using the included [`Dockerfile`](Dockerfile))
+   * **Build Command**: `pip install -r requirements.txt`
+   * **Start Command**: `python src/main.py`
+   * **Instance Type**: `Free`
+4. **Configure Environment Variables**:
+   In the **Environment Variables** section on Render, add the following variables:
+   * `DISCORD_TOKEN`: Your secret bot token from the [Discord Developer Portal](https://discord.com/developers/applications).
+   * `APPLICATION_ID`: Your Discord application client ID.
+   * `PORT`: `10000` (Render automatically assigns and injects `$PORT`, but defining it ensures consistency).
+   * `SERVER_ID`: *(Optional)* Target Discord Guild ID for instant guild-scoped slash command synchronization.
+   * `OPENAI_API_KEY`: *(Optional)* OpenAI API key for `/ask`.
+   * `GEMINI_API_KEY`: *(Optional)* Google Gemini API key for `/ask` fallback.
+   * `DATABASE_URL`: *(Optional)* PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted, the bot falls back to zero-configuration SQLite or in-memory mode automatically.
+5. **Deploy**:
+   * Click **Create Web Service**.
+   * Render will clone your repository, install dependencies, start `python src/main.py`, and detect the health server listening on port `10000`.
+   * Once deployed, your web service will be assigned a public URL: `https://<your-render-service>.onrender.com`.
+
+---
+
+### UptimeRobot Monitoring (Keep-Alive Setup)
+
+Render's free tier Web Services automatically spin down after 15 minutes of inactivity if they do not receive inbound HTTP traffic. You can keep your bot online 24/7 by setting up a free monitor with [UptimeRobot](https://uptimerobot.com/):
+
+1. Log into your [UptimeRobot Dashboard](https://uptimerobot.com/).
+2. Click **+ Add New Monitor**.
+3. Configure the monitor details:
+   * **Monitor Type**: `HTTP(s)`
+   * **Friendly Name**: `DC Custom Bot Health Check`
+   * **URL (or IP)**: `https://<your-render-service>.onrender.com/health` (replace `<your-render-service>` with your actual Render service name)
+   * **Monitoring Interval**: Every `5 minutes` or `10 minutes` (must be under 15 minutes to prevent spin-down)
+4. Click **Create Monitor**.
+
+> [!IMPORTANT]
+> **Health Endpoint Scope**:
+> The `/health` endpoint strictly verifies that the **Render web process and asyncio event loop are alive and responding to HTTP requests**.
+> * It does **NOT** verify Discord Gateway connection status or Discord WebSocket availability.
+> * It does **NOT** verify third-party AI provider quotas (OpenAI or Google Gemini).
+> If Discord experiences an API outage or your bot token is rotated, `/health` may still respond with HTTP 200 as long as the Python process remains running. Always review Render console logs to check Discord Gateway status.
+
+---
+
+## Troubleshooting Guide
+
+### 1. "No open ports detected"
+* **Symptom**: Render deployment fails with `No open ports detected on 0.0.0.0` or times out waiting for port detection.
+* **Cause**: Render expects a web process listening on the port provided in the `$PORT` environment variable (typically `10000`). If your start command bypasses `src/main.py` or the server failed to bind to `0.0.0.0`, Render marks the service as failed.
+* **Resolution**:
+  * Ensure your Start Command in Render is set to `python src/main.py`.
+  * Verify that `src/core/health.py` binds to host `0.0.0.0` (not `127.0.0.1` or `localhost`).
+  * Ensure the `PORT` environment variable is either unset (defaults to `10000`) or matches Render's assigned port.
+
+### 2. "503 Service Unavailable"
+* **Symptom**: Accessing `https://<your-render-service>.onrender.com/health` returns HTTP 503 or "Application failed to respond".
+* **Cause**: The web service is currently spinning up, the build failed, or the Python application encountered an unhandled startup error (such as missing required environment variables).
+* **Resolution**:
+  * Check the **Logs** tab in your Render dashboard.
+  * Verify that both `DISCORD_TOKEN` and `APPLICATION_ID` are configured correctly in the Render Environment Variables tab. The bot exits on startup if these credentials are missing.
+  * Allow 30–60 seconds after a fresh deploy for the container to initialize and bind the port.
+
+### 3. "Discord bot is online but health monitor fails"
+* **Symptom**: The bot responds to slash commands in Discord, but UptimeRobot reports a down alert (e.g. 404 Not Found or Connection Timeout).
+* **Cause**: The monitor URL is misspelled, points to an invalid path, or targets the wrong protocol (`http://` instead of `https://`).
+* **Resolution**:
+  * Verify the exact URL format: `https://<your-render-service>.onrender.com/health` (both `/` and `/health` are valid endpoints returning `{"status": "ok"}`).
+  * Test the endpoint manually from your terminal:
+    ```bash
+    curl -i https://<your-render-service>.onrender.com/health
+    ```
+  * Confirm that UptimeRobot is configured with monitor type `HTTP(s)` and an HTTP method of `GET`.
+
+### 4. "Database unavailable"
+* **Symptom**: Logs display database connection warnings (e.g., `Database connection failed... Falling back to SQLite` or `Operating in-memory`).
+* **Cause**: The external PostgreSQL database specified in `DATABASE_URL` is unreachable, credentials are invalid, or network access is firewalled.
+* **Resolution**:
+  * DC Custom Bot is engineered with **graceful degradation**. If PostgreSQL is unreachable, the bot automatically switches to local SQLite (`sqlite+aiosqlite:///data/bot.db`) or in-memory storage.
+  * All moderation, music, AI, welcome, and ticket features will continue to operate normally.
+  * If persistent PostgreSQL storage is required, verify that your PostgreSQL host is online, the database name and credentials are correct, and the database permits inbound connections from Render IP addresses. See [docs/database.md](docs/database.md) for details.
 
 ---
 

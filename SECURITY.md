@@ -57,7 +57,7 @@ To help us investigate and resolve the issue quickly, please include:
 
 ### 2. Environment Variables (`.env` Usage)
 
-* All runtime credentials and configuration must be loaded through environment variables using `dotenv` and `os.getenv`.
+* All runtime credentials and configuration must be loaded through environment variables using `dotenv` and `os.getenv` (e.g. `DISCORD_TOKEN`, `APPLICATION_ID`, `SERVER_ID`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `PORT`, `DATABASE_URL`).
 * Never hardcode sensitive values directly into source code, test files, or default parameter values.
 * Ensure loggers do not print environment variables, request headers, database connection strings, or config structures that could contain secrets.
 
@@ -87,4 +87,11 @@ For persistent storage configurations:
 * Manage dependencies using [**uv**](https://docs.astral.sh/uv/) with reproducible locks in [`uv.lock`](uv.lock) or standard dependencies in [`requirements.txt`](requirements.txt).
 * Regularly audit and update project dependencies to resolve known vulnerabilities in upstream packages (`discord.py`, `aiohttp`, `cryptography`, etc.).
 * Review new dependencies carefully before adding them to avoid unmaintained or insecure third-party code.
+
+### 7. Web Service & Health Endpoint Security
+
+When deployed on cloud platforms such as Render Web Services:
+* **Minimal Exposure Surface**: The embedded [`aiohttp`](src/core/health.py) server exposes only two unauthenticated read-only endpoints: `GET /` and `GET /health`. No administrative or mutating actions are exposed over HTTP.
+* **Zero Information Leakage**: The health endpoint returns strictly a static payload `{"status": "ok"}` with HTTP 200. It never exposes Discord tokens, application IDs, server IDs, database credentials, server counts, user IDs, or internal stack traces.
+* **Network Isolation**: The health server binds to `0.0.0.0:$PORT` to satisfy cloud platform port binding requirements and external uptime pings (e.g. UptimeRobot). Discord interactions occur exclusively through outbound Discord Gateway WebSockets with TLS encryption, keeping the bot logic isolated from inbound HTTP requests.
 

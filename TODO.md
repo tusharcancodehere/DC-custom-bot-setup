@@ -16,6 +16,8 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Reusable permission checks and role hierarchy decorators ([`src/core/permissions.py`](src/core/permissions.py))
 * [x] Shared Discord UI components and views ([`src/views/common.py`](src/views/common.py))
 * [x] Graceful shutdown handling (`SIGINT`, `SIGTERM`, `!shutdown`)
+* [x] Lightweight HTTP health server for Render Web Service port binding ([`src/core/health.py`](src/core/health.py))
+* [x] Dual HTTP health endpoints (`GET /` and `GET /health` returning `{"status": "ok"}`)
 * [x] Multi-container orchestration via Docker Compose ([`docker-compose.yml`](docker-compose.yml))
 * [x] Continuous integration pipeline via GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
 
@@ -146,4 +148,6 @@ This document is the source of truth for project progress, tracking implemented 
 * [x] Community standards in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 * [x] Vulnerability reporting in [SECURITY.md](SECURITY.md)
 * [x] Architectural notes in [docs/database.md](docs/database.md)
+* [x] Render Web Service cloud deployment and monitoring guide in [README.md](README.md) and [docs/deployment.md](docs/deployment.md)
+* [x] Deployment troubleshooting guide for port detection and cloud hosting in [README.md](README.md)
 * [x] Open source license in [LICENSE](LICENSE)

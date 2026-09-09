@@ -24,6 +24,7 @@ DC-custom-bot-setup/
 │   │   ├── bot.py           # CustomBot class, bot lifecycle, command sync
 │   │   ├── config.py        # Configuration management & validation
 │   │   ├── errors.py        # Custom exceptions and error handlers
+│   │   ├── health.py        # Lightweight HTTP server for Render Web Service & monitoring
 │   │   ├── loader.py        # Dynamic feature/cog loader
 │   │   ├── logging.py       # Centralized application logging
 │   │   └── permissions.py   # Reusable permission and authorization checks
@@ -49,7 +50,8 @@ DC-custom-bot-setup/
 │   └── workflows/
 │       └── ci.yml           # Continuous integration test matrix
 ├── docs/                    # Extended documentation guides
-│   └── database.md          # Database guide and architectural notes
+│   ├── database.md          # Database guide and architectural notes
+│   └── deployment.md        # Render Web Service deployment and UptimeRobot guide
 ├── requirements.txt         # Pip dependency requirements for standard hosting
 ├── Dockerfile               # Production container definition
 ├── docker-compose.yml       # Multi-container service definition (Bot + PostgreSQL)
@@ -67,6 +69,7 @@ DC-custom-bot-setup/
 * **Avoid unnecessary abstractions**: Prefer straightforward, readable Python over clever Python. Do not introduce complex multi-layer abstractions (factories, unit of work, repository patterns) unless the codebase genuinely demands them.
 * **Keep features independent**: Features should remain decoupled from one another. Shared functionality belongs in `src/core/` or `src/views/`.
 * **Graceful degradation**: Features that interact with external services (database, AI APIs, voice) should fail safely and inform the user with friendly messages rather than crashing the bot.
+* **Non-blocking web health server**: Cloud platforms such as Render Web Services require an open HTTP port. The bot embeds a lightweight [`aiohttp`](src/core/health.py) server listening on `0.0.0.0:$PORT` (serving `GET /` and `GET /health`). Never execute blocking operations that would delay the event loop or prevent the health server from responding.
 
 ---
 
@@ -117,6 +120,8 @@ Open `.env` and fill in your development credentials (see the beginner-friendly 
 
 * `DISCORD_TOKEN`: Your bot token from the [Discord Developer Portal](https://discord.com/developers/applications).
 * `APPLICATION_ID`: Your Discord application/client ID from the [Discord Developer Portal](https://discord.com/developers/applications).
+* `SERVER_ID`: (Optional) Target Discord server/guild ID for instant testing of slash commands during development.
+* `PORT`: (Optional) Port for the lightweight HTTP health check server (defaults to `10000`; automatically provided by Render as `$PORT`).
 * **Privileged Gateway Intents**: Ensure both **Server Members Intent** and **Message Content Intent** are toggled **ON** in the Developer Portal (under **Bot** -> **Privileged Gateway Intents**).
 * `DATABASE_URL`: (Optional) PostgreSQL connection string (`postgresql+asyncpg://...`). If omitted or empty, the bot automatically uses a local SQLite database (`sqlite+aiosqlite:///data/bot.db`). See [docs/database.md](docs/database.md) for details.
 * `OPENAI_API_KEY`: (Optional) OpenAI API key for testing AI commands.
@@ -139,6 +144,8 @@ Start the bot locally:
   ```
 
 > [!NOTE]
+> When the bot starts, the HTTP health server begins listening concurrently on `http://0.0.0.0:10000` (or the configured `PORT`). You can verify it locally by running `curl http://127.0.0.1:10000/health`, which returns `{"status": "ok"}` with HTTP 200.
+>
 > Database persistence works out of the box with SQLite. If you are using PostgreSQL or making model changes, apply schema migrations using `uv run alembic upgrade head` or `alembic upgrade head`.
 
 ---
@@ -229,6 +236,7 @@ When your changes are ready, open a Pull Request (PR):
 2. **Pre-PR Checklist**:
    - [ ] Code compiles cleanly: `uv run python -m compileall -q src alembic tests`
    - [ ] All unit tests pass: `uv run python -m unittest discover -s tests -v`
+   - [ ] Verified health check endpoint passes: `uv run python -m unittest tests/test_health.py -v`
    - [ ] No secrets or `.env` files are tracked in Git.
    - [ ] Documentation is updated if commands or configurations changed.
 3. **Open the PR**:

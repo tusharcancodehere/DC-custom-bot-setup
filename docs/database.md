@@ -238,3 +238,25 @@ async def fetch_user_level(guild_id: int, user_id: int) -> int:
 * **Sanitize logs**: The bot ensures database passwords are never logged to the console or log files.
 * **Non-blocking asynchronous queries**: Always use `await session.execute(...)` to keep the Discord gateway responsive.
 * **Principle of least privilege**: In production, create a dedicated database user with permissions restricted only to the bot's database.
+
+---
+
+## 9. Cloud Deployments & Troubleshooting (Render Web Services)
+
+When deploying to cloud platforms such as [Render Web Services](../README.md#option-5-render-web-service-deployment-free-cloud-hosting):
+
+### Configuring `DATABASE_URL`
+* Provide the PostgreSQL connection string in your Render Environment Variables dashboard.
+* Format: `postgresql+asyncpg://<username>:<password>@<host>:<port>/<database>`
+* If using managed PostgreSQL providers (such as Render PostgreSQL, Supabase, or Neon), append SSL parameters if required: `postgresql+asyncpg://user:pass@host:5432/dbname?ssl=require`.
+
+### Graceful Degradation & "Database unavailable"
+* If `DATABASE_URL` is omitted, unset, or unreachable, DC Custom Bot automatically falls back:
+  1. Tries local SQLite at `sqlite+aiosqlite:///data/bot.db`.
+  2. If filesystem writes are restricted, operates in-memory.
+* The bot logs `Database connection failed... Operating in-memory` and continues running.
+* Discord commands (Moderation, Welcome, AI, Music, Mini-Games, Tickets) remain active and do not crash the bot.
+* To troubleshoot persistent database connectivity on cloud hosts:
+  * Check the Render service console logs for connection timeout or authentication failure traces.
+  * Verify the PostgreSQL instance is running and accepts incoming network traffic from external IPs.
+  * Test connectivity using `psql` or an interactive test script before configuring `DATABASE_URL` in production.

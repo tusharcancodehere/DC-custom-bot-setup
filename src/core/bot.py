@@ -51,6 +51,7 @@ class CustomBot(commands.Bot):
         super().__init__(command_prefix=COMMAND_PREFIX, intents=intents, application_id=int(os.getenv("APPLICATION_ID")))
         self.token = os.getenv("DISCORD_TOKEN")
         self._synced = False
+        self.health_server = None
         self._register_prefix_commands()
 
     def _register_prefix_commands(self):
@@ -94,6 +95,11 @@ class CustomBot(commands.Bot):
 
     async def close(self):
         logging.info("Shutting down bot...")
+        if hasattr(self, "health_server") and self.health_server is not None:
+            try:
+                await self.health_server.stop()
+            except Exception as e:
+                logging.error(f"Error stopping health server: {e}", exc_info=e)
         for voice_client in self.voice_clients:
             try:
                 await voice_client.disconnect(force=True)
