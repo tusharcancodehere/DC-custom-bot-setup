@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from pathlib import Path
 import shutil
 from urllib.parse import urlparse
@@ -290,7 +291,16 @@ class Music(commands.Cog):
     def _format_error(self, error: Exception) -> str:
         """Translate technical yt-dlp errors into clean, user-friendly messages."""
         msg = str(error).lower()
-        if "confirm your age" in msg or "sign in to confirm" in msg or ("age" in msg and "restricted" in msg):
+        if (
+            "confirm you're not a bot" in msg
+            or "sign in to confirm" in msg
+            or "bot detection" in msg
+            or "po token" in msg
+            or "botguard" in msg
+            or "automated queries" in msg
+        ):
+            return "YouTube blocked playback due to bot-detection on the host server. Skipping to next track..."
+        if "confirm your age" in msg or ("age" in msg and "restricted" in msg):
             return "This video is age-restricted and cannot be played without authentication."
         if "private video" in msg:
             return "This video is private and cannot be played."
@@ -302,6 +312,18 @@ class Music(commands.Cog):
             return "The requested video or playlist does not exist."
         return "Could not stream the requested track. Please try a different URL."
 
+    def _get_extractor_args(self) -> dict:
+        """Configure extractor arguments including player clients and optional PO Token Provider URL."""
+        args: dict = {
+            "youtube": {
+                "player_client": ["mweb", "web_music", "web_embedded", "android", "ios"],
+            }
+        }
+        pot_url = os.getenv("POT_PROVIDER_URL") or os.getenv("YOUTUBE_POT_PROVIDER_URL")
+        if pot_url and pot_url.strip():
+            args["youtubepot-bgutilhttp"] = {"base_url": [pot_url.strip()]}
+        return args
+
     def _extract_info(self, url: str) -> dict:
         """Extract metadata for video or playlist using flat extraction."""
         opts = {
@@ -310,6 +332,7 @@ class Music(commands.Cog):
             "quiet": True,
             "no_warnings": True,
             "playlistend": 100,
+            "extractor_args": self._get_extractor_args(),
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
@@ -322,6 +345,7 @@ class Music(commands.Cog):
             "skip_download": True,
             "quiet": True,
             "no_warnings": True,
+            "extractor_args": self._get_extractor_args(),
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -431,17 +455,37 @@ class Music(commands.Cog):
                         track["thumbnail"] = detailed_info.get("thumbnail")
             except Exception as e:
                 logger.warning(f"Failed to stream track '{track['title']}': {e}")
-                channel = self.text_channels.get(guild_id)
-                if channel:
+                err_msg = f"⚠️ Could not stream **{track['title']}**: {self._format_error(e)}"
+                if initial_interaction and not initial_interaction.is_expired():
                     try:
-                        await channel.send(f"⚠️ Could not stream **{track['title']}**: {self._format_error(e)}. Skipping...")
+                        await initial_interaction.followup.send(err_msg)
                     except Exception:
                         pass
+                else:
+                    channel = self.text_channels.get(guild_id)
+                    if channel:
+                        try:
+                            await channel.send(err_msg)
+                        except Exception:
+                            pass
                 asyncio.create_task(self.play_next(guild_id))
                 return
 
             if not stream_url:
                 logger.warning(f"No stream URL found for '{track['title']}'. Skipping...")
+                no_stream_msg = f"⚠️ Could not extract audio stream for **{track['title']}**. Skipping..."
+                if initial_interaction and not initial_interaction.is_expired():
+                    try:
+                        await initial_interaction.followup.send(no_stream_msg)
+                    except Exception:
+                        pass
+                else:
+                    channel = self.text_channels.get(guild_id)
+                    if channel:
+                        try:
+                            await channel.send(no_stream_msg)
+                        except Exception:
+                            pass
                 asyncio.create_task(self.play_next(guild_id))
                 return
 
@@ -471,6 +515,19 @@ class Music(commands.Cog):
 
             except Exception as e:
                 logger.error(f"Failed to start voice playback in guild {guild_id}: {e}")
+                play_err_msg = f"⚠️ Failed to play audio for **{track['title']}**. Skipping..."
+                if initial_interaction and not initial_interaction.is_expired():
+                    try:
+                        await initial_interaction.followup.send(play_err_msg)
+                    except Exception:
+                        pass
+                else:
+                    channel = self.text_channels.get(guild_id)
+                    if channel:
+                        try:
+                            await channel.send(play_err_msg)
+                        except Exception:
+                            pass
                 asyncio.create_task(self.play_next(guild_id))
                 return
 

@@ -64,6 +64,7 @@ Configure these variables in the **Environment Variables** tab of your Render We
 | `DATABASE_URL` | Optional | `""` | PostgreSQL connection string (`postgresql+asyncpg://...`). If empty, SQLite or in-memory mode is used automatically. |
 | `OPENAI_API_KEY` | Optional | — | API key for OpenAI assistant (`gpt-5-mini`). |
 | `GEMINI_API_KEY` | Optional | — | API key for Google Gemini fallback (`gemini-2.5-flash`). |
+| `POT_PROVIDER_URL` | Optional | `""` | Proof-of-Origin (PO) Token Provider URL (e.g. `http://pot-provider:4416` or `https://my-pot-provider.onrender.com`) for yt-dlp to bypass YouTube bot detection. |
 
 > [!WARNING]
 > Never commit actual credentials or your `.env` file to GitHub. Add them exclusively through the Render dashboard.
@@ -162,3 +163,19 @@ UptimeRobot will now send an HTTP GET request to `/health` every 5 minutes, keep
 * **Fix**:
   1. DC Custom Bot uses **graceful degradation**: all commands (moderation, music, welcome, tickets, AI) continue working normally in-memory.
   2. To restore persistent PostgreSQL storage, verify credentials and SSL settings in `DATABASE_URL`. See [docs/database.md](database.md) for details.
+
+### Issue 5: YouTube "Sign in to confirm you're not a bot"
+* **Error**: Music commands report `Sign in to confirm you're not a bot` or `mweb client https formats require a GVS PO Token which was not provided`.
+* **Why it happens**: YouTube flags shared hosting and datacenter IP ranges (including Render) to block automated scrapers.
+* **Fix & Architecture**:
+  1. **Automatic Skip & Queue Continuation**: The bot automatically catches bot-detection errors, sends a clear warning message to the channel, and continues playing the next track in the queue without stalling.
+  2. **Player Client Fallback**: The bot natively queries a cascade of clients (`mweb`, `web_music`, `web_embedded`, `android`, `ios`) so tracks playable without BotGuard checks stream smoothly.
+  3. **Deploying a PO Token Provider (Recommended for high reliability)**:
+     - The project includes the [`bgutil-ytdlp-pot-provider`](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) plugin.
+     - On Render, deploy the prebuilt Docker image `brainicism/bgutil-ytdlp-pot-provider` as a Web Service or Private Service.
+     - In your bot's Render Web Service environment variables, set:
+       ```text
+       POT_PROVIDER_URL=http://<pot-service-name>:4416
+       ```
+       *(or `https://<your-pot-provider>.onrender.com` if deployed as a public web service)*.
+     - The bot will dynamically request GVS PO tokens from this service for `mweb` and `web_music` requests without needing personal YouTube cookies or sessions.

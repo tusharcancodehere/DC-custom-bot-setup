@@ -86,6 +86,43 @@ class TestMusicHelpers(unittest.TestCase):
         self.assertEqual(pl_embed.title, "🎶 Playlist Added to Queue")
         self.assertIn("15", pl_embed.description)
 
+    def test_format_error_bot_detection(self):
+        """Verify yt-dlp bot-detection errors are translated into clear bot-detection warnings."""
+        bot_errors = [
+            Exception("Sign in to confirm you're not a bot. This helps protect our community."),
+            Exception("sign in to confirm you are not a bot"),
+            Exception("WARNING: [youtube] mweb client https formats require a GVS PO Token which was not provided."),
+            Exception("Sign in to confirm your identity or automated queries detected."),
+            Exception("Botguard token challenge failed"),
+        ]
+        cog = Music(MagicMock())
+        for err in bot_errors:
+            msg = cog._format_error(err)
+            self.assertIn("bot-detection", msg.lower())
+            self.assertIn("skipping", msg.lower())
+
+    def test_format_error_other_conditions(self):
+        """Verify standard error translation for age-restriction, private, and copyright."""
+        cog = Music(MagicMock())
+        self.assertIn("age-restricted", cog._format_error(Exception("Confirm your age to view")).lower())
+        self.assertIn("private", cog._format_error(Exception("This is a private video")).lower())
+        self.assertIn("copyright", cog._format_error(Exception("Video blocked due to copyright")).lower())
+        self.assertIn("does not exist", cog._format_error(Exception("Video does not exist")).lower())
+
+    def test_get_extractor_args(self):
+        """Verify extractor args construction with and without POT_PROVIDER_URL."""
+        cog = Music(MagicMock())
+        with patch.dict("os.environ", {}, clear=True):
+            args = cog._get_extractor_args()
+            self.assertIn("youtube", args)
+            self.assertEqual(args["youtube"]["player_client"], ["mweb", "web_music", "web_embedded", "android", "ios"])
+            self.assertNotIn("youtubepot-bgutilhttp", args)
+
+        with patch.dict("os.environ", {"POT_PROVIDER_URL": "http://127.0.0.1:4416"}):
+            args = cog._get_extractor_args()
+            self.assertIn("youtubepot-bgutilhttp", args)
+            self.assertEqual(args["youtubepot-bgutilhttp"]["base_url"], ["http://127.0.0.1:4416"])
+
 
 class TestMusicCommands(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -102,6 +139,7 @@ class TestMusicCommands(unittest.IsolatedAsyncioTestCase):
         interaction = AsyncMock(spec=discord.Interaction)
         interaction.response = AsyncMock()
         interaction.followup = AsyncMock()
+        interaction.is_expired = MagicMock(return_value=False)
 
         if in_server:
             guild = MagicMock(spec=discord.Guild)
@@ -357,6 +395,80 @@ class TestMusicCommands(unittest.IsolatedAsyncioTestCase):
         queue_a.append({"title": "Song A"})
         self.assertEqual(len(queue_a), 1)
         self.assertEqual(len(queue_b), 0)
+
+    @patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    async def test_play_next_skips_bot_blocked_track_and_continues_queue(self, mock_which):
+        """Verify that when a track triggers YouTube bot detection, play_next skips it and plays next track."""
+        interaction = self._mock_interaction()
+        guild_id = interaction.guild.id
+        self.cog.text_channels[guild_id] = interaction.channel
+
+        track_1 = {
+            "title": "Blocked Track",
+            "url": "https://www.youtube.com/watch?v=blocked",
+            "duration": 180,
+            "uploader": "Blocked Artist",
+            "thumbnail": None,
+        }
+        track_2 = {
+            "title": "Allowed Track",
+            "url": "https://www.youtube.com/watch?v=allowed",
+            "duration": 200,
+            "uploader": "Allowed Artist",
+            "thumbnail": None,
+        }
+        queue = self.cog.get_queue(guild_id)
+        queue.extend([track_1, track_2])
+
+        def fake_get_stream_info(url):
+            if "blocked" in url:
+                raise Exception("Sign in to confirm you're not a bot. This helps protect our community.")
+            return "https://stream.googlevideo.com/audio2", track_2
+
+        with patch.object(self.cog, "_get_stream_info", side_effect=fake_get_stream_info):
+            with patch("discord.FFmpegPCMAudio"):
+                await self.cog.play_next(guild_id, initial_interaction=interaction)
+                await asyncio.sleep(0.05)
+
+                interaction.followup.send.assert_called()
+                call_args = interaction.followup.send.call_args[0][0]
+                self.assertIn("Blocked Track", call_args)
+                self.assertIn("bot-detection", call_args.lower())
+
+                voice = interaction.guild.voice_client
+                voice.play.assert_called_once()
+                self.assertEqual(self.cog.current[guild_id]["title"], "Allowed Track")
+                self.assertEqual(len(queue), 0)
+
+    @patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    async def test_play_next_skips_empty_stream_url_and_continues(self, mock_which):
+        """Verify that when a track returns no direct audio stream, play_next skips it and plays next track."""
+        interaction = self._mock_interaction()
+        guild_id = interaction.guild.id
+        self.cog.text_channels[guild_id] = interaction.channel
+
+        track_1 = {"title": "No Stream Track", "url": "https://youtube.com/watch?v=nostream", "duration": 100, "uploader": "A", "thumbnail": None}
+        track_2 = {"title": "Good Track", "url": "https://youtube.com/watch?v=good", "duration": 150, "uploader": "B", "thumbnail": None}
+        queue = self.cog.get_queue(guild_id)
+        queue.extend([track_1, track_2])
+
+        def fake_get_stream_info(url):
+            if "nostream" in url:
+                return None, {}
+            return "https://stream.googlevideo.com/good", track_2
+
+        with patch.object(self.cog, "_get_stream_info", side_effect=fake_get_stream_info):
+            with patch("discord.FFmpegPCMAudio"):
+                await self.cog.play_next(guild_id, initial_interaction=interaction)
+                await asyncio.sleep(0.05)
+
+                interaction.followup.send.assert_called()
+                call_args = interaction.followup.send.call_args[0][0]
+                self.assertIn("No Stream Track", call_args)
+
+                voice = interaction.guild.voice_client
+                voice.play.assert_called_once()
+                self.assertEqual(self.cog.current[guild_id]["title"], "Good Track")
 
 
 if __name__ == "__main__":

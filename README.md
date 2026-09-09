@@ -258,6 +258,7 @@ cp .env.example .env
 | `OPENAI_API_KEY` | Optional | OpenAI API key for `/ask` (`gpt-5-mini`). |
 | `GEMINI_API_KEY` | Optional | Google Gemini API key for `/ask` fallback (`gemini-2.5-flash`). |
 | `DATABASE_URL` | Optional | Database connection string. Recommended for PostgreSQL in production (`postgresql+asyncpg://...`). If left empty, SQLite is used automatically (`sqlite+aiosqlite:///data/bot.db`). |
+| `POT_PROVIDER_URL` | Optional | Proof-of-Origin (PO) Token Provider URL for yt-dlp to bypass YouTube bot detection on cloud/datacenter IPs (e.g. `http://pot-provider:4416` or `https://my-pot-provider.onrender.com`). |
 
 > [!WARNING]
 > Never commit your `.env` file or expose your bot token publicly.
@@ -469,6 +470,18 @@ Render's free tier Web Services automatically spin down after 15 minutes of inac
   * DC Custom Bot is engineered with **graceful degradation**. If PostgreSQL is unreachable, the bot automatically switches to local SQLite (`sqlite+aiosqlite:///data/bot.db`) or in-memory storage.
   * All moderation, music, AI, welcome, and ticket features will continue to operate normally.
   * If persistent PostgreSQL storage is required, verify that your PostgreSQL host is online, the database name and credentials are correct, and the database permits inbound connections from Render IP addresses. See [docs/database.md](docs/database.md) for details.
+
+### 5. YouTube "Sign in to confirm you're not a bot" on Render
+* **Symptom**: Music playback logs report `Sign in to confirm you're not a bot` or `mweb client https formats require a GVS PO Token which was not provided`.
+* **Cause**: YouTube flags datacenter and hosting provider IP addresses (such as Render, AWS, and DigitalOcean), requiring Proof-of-Origin (PO) tokens / BotGuard verification for audio extraction.
+* **Resolution**:
+  * **Automatic Queue Continuation**: The bot automatically detects YouTube bot-blocks, posts a friendly message to the text channel, logs the warning, and immediately continues playing the next track in the queue without stalling or crashing.
+  * **Client Cascade**: The bot automatically cascades through `mweb`, `web_music`, `web_embedded`, `android`, and `ios` player clients so available streams can resolve without manual cookie extraction.
+  * **PO Token Provider (Recommended for 100% cloud reliability)**: Deploy the maintained open-source PO Token Provider container ([`brainicism/bgutil-ytdlp-pot-provider`](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)) as a Render Web Service or Private Service, and set the environment variable:
+    ```bash
+    POT_PROVIDER_URL=http://<pot-provider-host>:4416
+    ```
+    The integrated `bgutil-ytdlp-pot-provider` plugin will automatically acquire tokens for yt-dlp without requiring personal cookies or browser session files. See [docs/deployment.md](docs/deployment.md) for full instructions.
 
 ---
 
