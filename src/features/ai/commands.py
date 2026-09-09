@@ -8,6 +8,8 @@ from discord.ext import commands
 from google import genai
 from openai import AsyncOpenAI
 
+from views.common import ERROR_COLOR, SUCCESS_COLOR
+
 SYSTEM_PROMPT = (
     "Be extremely concise and direct. Answer only what is asked. "
     "Use the fewest words possible while remaining clear and correct. "
@@ -16,8 +18,6 @@ SYSTEM_PROMPT = (
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
-SUCCESS_COLOR = 0x57F287
-ERROR_COLOR = 0xED4245
 MAX_HISTORY_MESSAGES = 20
 MAX_DISCORD_MESSAGE_LENGTH = 1900
 
@@ -125,10 +125,24 @@ class AI(commands.Cog):
         self.conversations[key].pop()
         embed = discord.Embed(
             title="❌ AI Temporarily Unavailable",
-            description="Both AI providers failed to respond. Please verify API configuration or try again in a moment.",
+            description="The AI assistant is temporarily unavailable. Please try again in a moment.",
             color=ERROR_COLOR,
         )
+        embed.set_footer(text="DC AI Assistant")
+        embed.timestamp = discord.utils.utcnow()
         await interaction.followup.send(embed=embed)
+
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        """Handle AI command errors without leaking internal technical details."""
+        logging.error(f"AI command error: {error}", exc_info=True)
+        message = "❌ An error occurred while processing your request. Please try again in a moment."
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            try:
+                await interaction.followup.send(message, ephemeral=True)
+            except Exception:
+                pass
 
     @app_commands.command(name="clear", description="Clear your personal AI conversation history")
     async def clear_command(self, interaction: discord.Interaction):
@@ -142,6 +156,8 @@ class AI(commands.Cog):
             desc = "You do not have any active conversation history to reset."
 
         embed = discord.Embed(title="🧹 Conversation Cleared", description=desc, color=SUCCESS_COLOR)
+        embed.set_footer(text="DC AI Assistant")
+        embed.timestamp = discord.utils.utcnow()
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot):
