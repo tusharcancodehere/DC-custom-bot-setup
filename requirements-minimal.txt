@@ -5,4 +5,5 @@ aiosqlite>=0.22.1
 alembic>=1.19.1
 asyncpg>=0.31.0
 pynacl>=1.6.2
+davey>=0.1.6
 yt-dlp>=2026.8.19
