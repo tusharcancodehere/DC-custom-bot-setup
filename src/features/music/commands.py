@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+import re
 import shutil
 from urllib.parse import urlparse
 
@@ -22,6 +23,18 @@ YOUTUBE_DOMAINS = {
     "music.youtube.com",
     "youtu.be",
 }
+
+BOT_DETECTION_PATTERNS = (
+    "confirm you're not a bot",
+    "confirm you are not a bot",
+    "sign in to confirm",
+    "bot detection",
+    "bot-detection",
+    "po token",
+    "botguard",
+    "automated queries",
+    "unusual traffic",
+)
 
 
 def is_youtube_url(url: str) -> bool:
@@ -287,18 +300,42 @@ class Music(commands.Cog):
             self.current.pop(guild_id, None)
             self.text_channels.pop(guild_id, None)
 
-    def _format_error(self, error: Exception) -> str:
-        """Translate technical yt-dlp errors into clean, user-friendly messages."""
+    def _is_bot_detection_error(self, error: Exception | str) -> bool:
+        """Check if an exception or message indicates YouTube bot-detection / BotGuard."""
         msg = str(error).lower()
-        if (
-            "confirm you're not a bot" in msg
-            or "sign in to confirm" in msg
-            or "bot detection" in msg
-            or "po token" in msg
-            or "botguard" in msg
-            or "automated queries" in msg
-        ):
+        return any(phrase in msg for phrase in BOT_DETECTION_PATTERNS)
+
+    def _sanitize_error(self, error: Exception | str) -> str:
+        """Sanitize error messages to remove URLs and verbose yt-dlp help/wiki text."""
+        msg = str(error)
+        lines = []
+        for line in msg.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            line_lower = line.lower()
+            if (
+                line_lower.startswith("see ")
+                or line_lower.startswith("please report")
+                or "github.com/yt-dlp" in line_lower
+                or "exporting-youtube-cookies" in line_lower
+                or "po-token-guide" in line_lower
+                or "type yt-dlp" in line_lower
+            ):
+                continue
+            lines.append(line)
+
+        cleaned = " ".join(lines)
+        cleaned = re.sub(r"https?://\S+", "", cleaned)
+        cleaned = re.sub(r"\b(learn more|see)\s*:?\s*$", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" :.-")
+        return cleaned or "Extraction error"
+
+    def _format_error(self, error: Exception | str) -> str:
+        """Translate technical yt-dlp errors into clean, user-friendly messages."""
+        if self._is_bot_detection_error(error):
             return "YouTube blocked playback due to bot-detection on the host server. Skipping to next track..."
+        msg = str(error).lower()
         if "confirm your age" in msg or ("age" in msg and "restricted" in msg):
             return "This video is age-restricted and cannot be played without authentication."
         if "private video" in msg:
@@ -439,7 +476,10 @@ class Music(commands.Cog):
                         track["thumbnail"] = detailed_info.get("thumbnail")
             except Exception as e:
                 self.current.pop(guild_id, None)
-                logger.warning(f"Failed to stream track '{track['title']}': {e}")
+                if self._is_bot_detection_error(e):
+                    logger.warning(f"YouTube bot-detection blocked track '{track['title']}'; skipping.")
+                else:
+                    logger.warning(f"Failed to stream track '{track['title']}': {self._sanitize_error(e)}")
                 err_msg = f"⚠️ Could not stream **{track['title']}**: {self._format_error(e)}"
                 if initial_interaction and not initial_interaction.is_expired():
                     try:
@@ -577,7 +617,10 @@ class Music(commands.Cog):
         try:
             info = await asyncio.to_thread(self._extract_info, clean_url)
         except Exception as e:
-            logger.warning(f"Extraction error for '{clean_url}': {e}")
+            if self._is_bot_detection_error(e):
+                logger.warning(f"YouTube bot-detection blocked URL '{clean_url}'.")
+            else:
+                logger.warning(f"Extraction error for '{clean_url}': {self._sanitize_error(e)}")
             await interaction.followup.send(f"❌ {self._format_error(e)}")
             return
 

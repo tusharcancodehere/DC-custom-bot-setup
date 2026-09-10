@@ -101,6 +101,47 @@ class TestMusicHelpers(unittest.TestCase):
             self.assertIn("bot-detection", msg.lower())
             self.assertIn("skipping", msg.lower())
 
+    def test_is_bot_detection_error(self):
+        """Verify bot detection error identification for various BotGuard and token errors."""
+        cog = Music(MagicMock())
+        positive_cases = [
+            Exception("Sign in to confirm you're not a bot. This helps protect our community."),
+            Exception("sign in to confirm you are not a bot"),
+            Exception("WARNING: [youtube] mweb client https formats require a GVS PO Token which was not provided."),
+            Exception("Sign in to confirm your identity or automated queries detected."),
+            Exception("Botguard token challenge failed"),
+            Exception("Our systems have detected unusual traffic from your computer network."),
+            "bot-detection triggered on datacenter IP",
+        ]
+        for case in positive_cases:
+            self.assertTrue(cog._is_bot_detection_error(case), f"Expected '{case}' to be recognized as bot detection")
+
+        negative_cases = [
+            Exception("This video is private."),
+            Exception("Video unavailable in your country."),
+            Exception("Video blocked due to copyright"),
+            Exception("HTTP Error 404: Not Found"),
+            Exception("Unknown extractor error"),
+        ]
+        for case in negative_cases:
+            self.assertFalse(cog._is_bot_detection_error(case), f"Expected '{case}' NOT to be recognized as bot detection")
+
+    def test_sanitize_error(self):
+        """Verify that error sanitization strips URLs and multi-line help/cookie advice."""
+        cog = Music(MagicMock())
+        raw_err = (
+            "ERROR: [youtube] 12345: Sign in to confirm you're not a bot. This helps protect our community. "
+            "Learn more: https://support.google.com/youtube/answer/13048992\n"
+            "See https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies for how to easily export cookies.\n"
+            "Please report this issue on https://github.com/yt-dlp/yt-dlp/issues?q="
+        )
+        sanitized = cog._sanitize_error(raw_err)
+        self.assertNotIn("https://", sanitized)
+        self.assertNotIn("http://", sanitized)
+        self.assertNotIn("exporting-youtube-cookies", sanitized)
+        self.assertNotIn("Please report", sanitized)
+        self.assertIn("Sign in to confirm you're not a bot", sanitized)
+
     def test_format_error_other_conditions(self):
         """Verify standard error translation for age-restriction, private, and copyright."""
         cog = Music(MagicMock())
@@ -480,6 +521,140 @@ class TestMusicCommands(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn(guild_id, self.cog.current)
             self.assertEqual(len(queue), 0)
             interaction.guild.voice_client.play.assert_not_called()
+
+    @patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    async def test_play_next_bot_detection_logs_concise_warning_and_continues(self, mock_which):
+        """Verify that bot-detection logs a concise sanitized message without dumping URLs, and continues queue."""
+        interaction = self._mock_interaction()
+        guild_id = interaction.guild.id
+        self.cog.text_channels[guild_id] = interaction.channel
+
+        track_1 = {
+            "title": "Blocked Song",
+            "url": "https://www.youtube.com/watch?v=blocked",
+            "duration": 180,
+            "uploader": "Blocked Artist",
+            "thumbnail": None,
+        }
+        track_2 = {
+            "title": "Good Song",
+            "url": "https://www.youtube.com/watch?v=good",
+            "duration": 200,
+            "uploader": "Good Artist",
+            "thumbnail": None,
+        }
+        queue = self.cog.get_queue(guild_id)
+        queue.extend([track_1, track_2])
+
+        def fake_get_stream_info(url):
+            if "blocked" in url:
+                raise Exception(
+                    "Sign in to confirm you're not a bot. This helps protect our community. "
+                    "Learn more: https://support.google.com/youtube/answer/13048992\n"
+                    "See https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide"
+                )
+            return "https://stream.googlevideo.com/audio", track_2
+
+        with patch.object(self.cog, "_get_stream_info", side_effect=fake_get_stream_info):
+            with patch("discord.FFmpegPCMAudio"):
+                with patch("features.music.commands.logger.warning") as mock_warn:
+                    await self.cog.play_next(guild_id, initial_interaction=interaction)
+                    await asyncio.sleep(0.05)
+
+                    # Verify concise warning logged
+                    mock_warn.assert_any_call("YouTube bot-detection blocked track 'Blocked Song'; skipping.")
+                    # Verify no help URLs dumped into logger
+                    for call in mock_warn.call_args_list:
+                        log_msg = str(call[0][0])
+                        self.assertNotIn("https://support.google.com", log_msg)
+                        self.assertNotIn("https://github.com", log_msg)
+
+                    # Verify user notified with friendly message
+                    interaction.followup.send.assert_called()
+                    call_args = interaction.followup.send.call_args[0][0]
+                    self.assertIn("Blocked Song", call_args)
+                    self.assertIn("bot-detection", call_args.lower())
+
+                    # Verify next track plays and queue updated
+                    voice = interaction.guild.voice_client
+                    voice.play.assert_called_once()
+                    self.assertEqual(self.cog.current[guild_id]["title"], "Good Song")
+                    self.assertEqual(len(queue), 0)
+
+    @patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    async def test_play_next_exhausts_entire_bot_blocked_queue_gracefully(self, mock_which):
+        """Verify that when all queued tracks are blocked by bot detection, the queue exhausts without crashing or looping forever."""
+        interaction = self._mock_interaction()
+        guild_id = interaction.guild.id
+        self.cog.text_channels[guild_id] = interaction.channel
+
+        tracks = [
+            {"title": f"Blocked Song {i}", "url": f"https://www.youtube.com/watch?v=blocked{i}", "duration": 100, "uploader": "Artist", "thumbnail": None}
+            for i in range(1, 4)
+        ]
+        queue = self.cog.get_queue(guild_id)
+        queue.extend(tracks)
+
+        def fake_get_stream_info(url):
+            raise Exception("Sign in to confirm you're not a bot.")
+
+        with patch.object(self.cog, "_get_stream_info", side_effect=fake_get_stream_info):
+            with patch("features.music.commands.logger.warning") as mock_warn:
+                await self.cog.play_next(guild_id, initial_interaction=interaction)
+                await asyncio.sleep(0.1)
+
+                # Each blocked track should have logged concise warning
+                for i in range(1, 4):
+                    mock_warn.assert_any_call(f"YouTube bot-detection blocked track 'Blocked Song {i}'; skipping.")
+
+                # Queue should be completely empty and current cleared
+                self.assertEqual(len(queue), 0)
+                self.assertNotIn(guild_id, self.cog.current)
+                # Voice client should never have been asked to play
+                interaction.guild.voice_client.play.assert_not_called()
+
+    @patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    async def test_play_next_non_bot_error_sanitizes_logged_exception(self, mock_which):
+        """Verify that non-bot errors with help text/URLs are sanitized before logging."""
+        interaction = self._mock_interaction()
+        guild_id = interaction.guild.id
+        self.cog.text_channels[guild_id] = interaction.channel
+
+        track = {"title": "Generic Fail Song", "url": "https://www.youtube.com/watch?v=fail", "duration": 100, "uploader": "Artist", "thumbnail": None}
+        self.cog.get_queue(guild_id).append(track)
+
+        verbose_error = Exception(
+            "ERROR: [youtube] fail: Requested format is not available. Use --list-formats for a list.\n"
+            "See https://github.com/yt-dlp/yt-dlp/wiki/FAQ for help"
+        )
+        with patch.object(self.cog, "_get_stream_info", side_effect=verbose_error):
+            with patch("features.music.commands.logger.warning") as mock_warn:
+                await self.cog.play_next(guild_id, initial_interaction=interaction)
+                await asyncio.sleep(0.05)
+
+                mock_warn.assert_called_once()
+                log_msg = str(mock_warn.call_args[0][0])
+                self.assertIn("Failed to stream track 'Generic Fail Song':", log_msg)
+                self.assertNotIn("https://github.com", log_msg)
+                self.assertNotIn("See ", log_msg)
+
+    async def test_play_command_bot_detection_sanitized_logging(self):
+        """Verify /play extraction failure logs a concise bot-detection message and does not dump help text."""
+        interaction = self._mock_interaction()
+        url = "https://www.youtube.com/watch?v=blocked_at_extract"
+
+        bot_error = Exception(
+            "ERROR: [youtube] blocked_at_extract: Sign in to confirm you're not a bot.\n"
+            "See https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies"
+        )
+        with patch.object(self.cog, "_extract_info", side_effect=bot_error):
+            with patch("features.music.commands.logger.warning") as mock_warn:
+                await self.cog.play_command.callback(self.cog, interaction, url)
+
+                mock_warn.assert_called_once_with(f"YouTube bot-detection blocked URL '{url}'.")
+                interaction.followup.send.assert_called_once()
+                call_args = interaction.followup.send.call_args[0][0]
+                self.assertIn("bot-detection", call_args.lower())
 
 
 if __name__ == "__main__":
