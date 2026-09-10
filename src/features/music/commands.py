@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from pathlib import Path
 import shutil
 from urllib.parse import urlparse
@@ -312,18 +311,6 @@ class Music(commands.Cog):
             return "The requested video or playlist does not exist."
         return "Could not stream the requested track. Please try a different URL."
 
-    def _get_extractor_args(self) -> dict:
-        """Configure extractor arguments including player clients and optional PO Token Provider URL."""
-        args: dict = {
-            "youtube": {
-                "player_client": ["mweb", "web_music", "web_embedded", "android", "ios"],
-            }
-        }
-        pot_url = os.getenv("POT_PROVIDER_URL") or os.getenv("YOUTUBE_POT_PROVIDER_URL")
-        if pot_url and pot_url.strip():
-            args["youtubepot-bgutilhttp"] = {"base_url": [pot_url.strip()]}
-        return args
-
     def _extract_info(self, url: str) -> dict:
         """Extract metadata for video or playlist using flat extraction."""
         opts = {
@@ -332,7 +319,6 @@ class Music(commands.Cog):
             "quiet": True,
             "no_warnings": True,
             "playlistend": 100,
-            "extractor_args": self._get_extractor_args(),
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
@@ -345,7 +331,6 @@ class Music(commands.Cog):
             "skip_download": True,
             "quiet": True,
             "no_warnings": True,
-            "extractor_args": self._get_extractor_args(),
         }
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -442,7 +427,6 @@ class Music(commands.Cog):
                 return
 
             track = queue.pop(0)
-            self.current[guild_id] = track
 
             # Extract direct stream URL just-in-time
             try:
@@ -454,6 +438,7 @@ class Music(commands.Cog):
                     if detailed_info.get("thumbnail"):
                         track["thumbnail"] = detailed_info.get("thumbnail")
             except Exception as e:
+                self.current.pop(guild_id, None)
                 logger.warning(f"Failed to stream track '{track['title']}': {e}")
                 err_msg = f"⚠️ Could not stream **{track['title']}**: {self._format_error(e)}"
                 if initial_interaction and not initial_interaction.is_expired():
@@ -472,6 +457,7 @@ class Music(commands.Cog):
                 return
 
             if not stream_url:
+                self.current.pop(guild_id, None)
                 logger.warning(f"No stream URL found for '{track['title']}'. Skipping...")
                 no_stream_msg = f"⚠️ Could not extract audio stream for **{track['title']}**. Skipping..."
                 if initial_interaction and not initial_interaction.is_expired():
@@ -502,6 +488,7 @@ class Music(commands.Cog):
                     asyncio.run_coroutine_threadsafe(self.play_next(guild_id), self.bot.loop)
 
                 voice.play(source, after=after_playing)
+                self.current[guild_id] = track
 
                 try:
                     await self.bot.change_presence(
@@ -514,6 +501,7 @@ class Music(commands.Cog):
                     pass
 
             except Exception as e:
+                self.current.pop(guild_id, None)
                 logger.error(f"Failed to start voice playback in guild {guild_id}: {e}")
                 play_err_msg = f"⚠️ Failed to play audio for **{track['title']}**. Skipping..."
                 if initial_interaction and not initial_interaction.is_expired():

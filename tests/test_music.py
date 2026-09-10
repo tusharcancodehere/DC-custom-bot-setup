@@ -109,20 +109,6 @@ class TestMusicHelpers(unittest.TestCase):
         self.assertIn("copyright", cog._format_error(Exception("Video blocked due to copyright")).lower())
         self.assertIn("does not exist", cog._format_error(Exception("Video does not exist")).lower())
 
-    def test_get_extractor_args(self):
-        """Verify extractor args construction with and without POT_PROVIDER_URL."""
-        cog = Music(MagicMock())
-        with patch.dict("os.environ", {}, clear=True):
-            args = cog._get_extractor_args()
-            self.assertIn("youtube", args)
-            self.assertEqual(args["youtube"]["player_client"], ["mweb", "web_music", "web_embedded", "android", "ios"])
-            self.assertNotIn("youtubepot-bgutilhttp", args)
-
-        with patch.dict("os.environ", {"POT_PROVIDER_URL": "http://127.0.0.1:4416"}):
-            args = cog._get_extractor_args()
-            self.assertIn("youtubepot-bgutilhttp", args)
-            self.assertEqual(args["youtubepot-bgutilhttp"]["base_url"], ["http://127.0.0.1:4416"])
-
 
 class TestMusicCommands(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -469,6 +455,31 @@ class TestMusicCommands(unittest.IsolatedAsyncioTestCase):
                 voice = interaction.guild.voice_client
                 voice.play.assert_called_once()
                 self.assertEqual(self.cog.current[guild_id]["title"], "Good Track")
+
+    @patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    async def test_play_next_failed_extraction_does_not_set_current(self, mock_which):
+        """Verify that when stream extraction fails, the track is not marked as currently playing."""
+        interaction = self._mock_interaction()
+        guild_id = interaction.guild.id
+        self.cog.text_channels[guild_id] = interaction.channel
+
+        track = {
+            "title": "Failing Track",
+            "url": "https://www.youtube.com/watch?v=fails",
+            "duration": 180,
+            "uploader": "Artist",
+            "thumbnail": None,
+        }
+        queue = self.cog.get_queue(guild_id)
+        queue.append(track)
+
+        with patch.object(self.cog, "_get_stream_info", side_effect=Exception("Extraction error")):
+            await self.cog.play_next(guild_id, initial_interaction=interaction)
+            await asyncio.sleep(0.05)
+
+            self.assertNotIn(guild_id, self.cog.current)
+            self.assertEqual(len(queue), 0)
+            interaction.guild.voice_client.play.assert_not_called()
 
 
 if __name__ == "__main__":

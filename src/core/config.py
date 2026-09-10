@@ -1,4 +1,4 @@
-import logging
+git add . && git commit -m "fix: simplify YouTube music extraction" && git pushimport logging
 import os
 import shutil
 import sys
